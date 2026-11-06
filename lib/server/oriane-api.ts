@@ -192,6 +192,7 @@ function toCsvRecord(content: unknown): Record<string, unknown> | null {
     "Account Total Posts Count": content.profilePostsCount,
     "Account Bio": content.profileBio,
     "Account Profile Picture URL": content.profilePictureUrl,
+    "Thumbnail URL": content.thumbnailMediaUrl,
     "Account Co-authors": coAuthors || undefined,
     "Audio Transcript (Pro)": transcript || undefined,
     "Comments (Pro)": comments || undefined,

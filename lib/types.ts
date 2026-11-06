@@ -79,6 +79,8 @@ export interface VideoRef {
   hook_text?: string;
   /** Visual tags from Oriane, lowercase English. */
   tags: string[];
+  /** Cover image, when the source has one (Oriane API). */
+  thumbnail_url?: string | null;
 }
 
 export interface SourceProfile {
@@ -361,6 +363,8 @@ export interface RenderRequest {
   market: Market;
   /** SourceProfile.video.id. The example video gets a cached clip. */
   source_video_id: string;
+  /** KEEP elements from the relevance map. The render must not change them. */
+  keep?: string[];
 }
 
 export type RenderStatus = "queued" | "processing" | "done" | "failed";

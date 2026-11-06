@@ -286,6 +286,8 @@ export function outputPrompt(source: SourceProfile, market: MarketProfile, map: 
     `- Write natural spoken ${lang} for short video: short lines, the way local creators talk. Not a word-for-word translation.`,
     "- Variant A applies the relevance map closely: every CHANGE item, and the hook example. Variants B and C can use other top patterns from the market.",
     "- The three hooks are three different sentences, each written the way top creators in this market open. Do not translate the source hook word for word. When the market's top hook types differ, give each variant a different hook_type.",
+    "- KEEP items are hard rules. A KEEP hook type is the hook type of every variant. A KEEP object or product is named, in the market language, in at least one line of every variant, and it is never swapped for another product.",
+    "- Never repeat a word, a phrase or a sentence inside a variant. Use a market phrase at most once per variant, only where a local creator would say it about this product; skip phrases that do not fit.",
     "- Every variant respects every KEEP item: the same creator, voice and energy, and the same product claim, translated.",
     "- Shot directions use the new objects and settings from the map.",
     "",

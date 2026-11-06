@@ -40,6 +40,8 @@ export interface OrianeRow {
   total_posts?: number;
   bio?: string;
   avatar_url?: string;
+  /** Oriane API only: the cover image of the video. */
+  thumbnail_url?: string;
   coauthors?: string;
   /** "Audio Transcript (Pro)". */
   transcript?: string;
@@ -86,6 +88,7 @@ const COLUMNS = {
   total_posts: ["Account Total Posts Count", "Total Posts", "Posts Count"],
   bio: ["Account Bio", "Bio"],
   avatar_url: ["Account Profile Picture URL", "Profile Picture URL"],
+  thumbnail_url: ["Thumbnail URL", "Thumbnail", "Cover URL"],
   coauthors: ["Account Co-authors", "Co-authors", "Coauthors"],
   transcript: ["Audio Transcript (Pro)", "Audio Transcript", "Transcript"],
   comments_text: ["Comments (Pro)", "Comments"],
@@ -449,6 +452,7 @@ function buildRow(get: Getter, stats: ParseStats): OrianeRow | null {
     ["profile_url", "profile_url", 500],
     ["bio", "bio", 500],
     ["avatar_url", "avatar_url", 1000],
+    ["thumbnail_url", "thumbnail_url", 1000],
     ["coauthors", "coauthors", 300],
     ["transcript", "transcript", 20000],
     ["comments_text", "comments_text", 2000],
@@ -652,6 +656,7 @@ export function toVideoRef(row: OrianeRow): VideoRef {
   if (row.followers !== undefined) ref.followers = row.followers;
   if (row.likes !== undefined) ref.likes = row.likes;
   if (row.published_at) ref.posted_at = row.published_at;
+  if (row.thumbnail_url) ref.thumbnail_url = row.thumbnail_url;
   const caption = clip(row.caption, 300);
   if (caption) ref.caption = caption;
   return ref;

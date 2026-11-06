@@ -1,12 +1,48 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import sampleOutput from "@/data/samples/output-us-jp.json";
-import { countryName } from "@/lib/markets";
+import { countryName, languageName } from "@/lib/markets";
 import type { RenderJob, RenderLength, RenderStatus, VariantId } from "@/lib/types";
+import { readCache, writeCache } from "./cache";
 import { config, isOffline } from "./env";
 import { UpstreamError, UserError } from "./http";
+
+// Finished renders are cached by prompt and length under data/cache/renders/<key>.json, with the video
+// copied to public/clips/renders/<job id>.mp4. A prepared demo replays them with no network.
+const RENDER_CACHE = "renders";
+
+export function renderCacheKey(prompt: string, length: RenderLength): string {
+  return createHash("sha1").update(`${prompt}|${length}`).digest("hex").slice(0, 16);
+}
+
+interface CachedRender extends RenderJob {
+  thumbnail_url?: string | null;
+  gmi_url?: string;
+  cached_at?: string;
+}
+
+/** Copy a finished render into public/clips/renders and remember it. Never throws. */
+async function persistClip(job: RenderJob): Promise<RenderJob> {
+  if (!job.video_url || job.video_url.startsWith("/")) return job;
+  try {
+    const dir = path.join(process.cwd(), "public", "clips", "renders");
+    await mkdir(dir, { recursive: true });
+    const res = await fetch(job.video_url, { cache: "no-store" });
+    if (!res.ok) return job;
+    const file = path.join(dir, `${job.id}.mp4`);
+    await writeFile(/*turbopackIgnore: true*/ file, Buffer.from(await res.arrayBuffer()));
+    const local: CachedRender = { ...job, video_url: `/clips/renders/${job.id}.mp4`, gmi_url: job.video_url, cached_at: new Date().toISOString() };
+    await writeCache(RENDER_CACHE, renderCacheKey(job.prompt, job.length), local);
+    return local;
+  } catch (err) {
+    console.warn(`[wan] could not cache render ${job.id}: ${err instanceof Error ? err.message : String(err)}`);
+    return job;
+  }
+}
 
 // Clips with Wan 3.0 on GMI Cloud. Verified on 6 November 2026 against
 // https://docs.gmicloud.ai/inference-engine/api-reference/video-api-reference and live renders.
@@ -39,13 +75,14 @@ export const RenderRequestSchema = z.object({
         name: z.string(),
         angle: z.string(),
         hook: z.object({ target: z.string(), gloss: z.string() }),
-        lines: z.array(z.looseObject({ t: z.number().optional(), shot: z.string(), gloss: z.string().optional() })),
+        lines: z.array(z.looseObject({ t: z.number().optional(), shot: z.string(), target: z.string().optional(), gloss: z.string().optional() })),
         duration_sec: z.number().optional(),
       }),
     ),
   }),
   market: z.looseObject({ country: z.string().min(2).max(2), language: z.string().min(2).max(8), platform: z.string() }),
   source_video_id: z.string().min(1).max(200),
+  keep: z.array(z.string().max(120)).max(12).optional(),
 });
 
 /** The validated request body. Only the fields the prompt needs. */
@@ -73,20 +110,36 @@ export function secondsFor(req: RenderInput): number {
 }
 
 const STYLE =
-  "Vertical 9:16 smartphone video, handheld, natural light, realistic, casual creator style, local setting and products. No on-screen text.";
+  "Vertical 9:16 smartphone video, handheld, natural light, realistic, casual creator style, local setting and products. No on-screen text, no subtitles, no captions.";
 
-/** One English prompt. The hook shot uses the first shots; the full video walks through every line. */
+/** The KEEP rules as one sentence. Products are named so the render does not swap them. */
+function keepLine(req: RenderInput): string {
+  const items = (req.keep ?? []).map((k) => k.trim()).filter(Boolean);
+  const base = ["the creator's face, voice and energy: the same person in every shot"];
+  const products = items.filter((k) => !/face|voice|energy|claim|hook|format|audio|sound/i.test(k));
+  for (const p of products) base.push(`the product "${p}" (the same real can or package in every shot, its brand and colors unchanged)`);
+  return `Keep unchanged: ${base.join("; ")}.`;
+}
+
+/**
+ * One English prompt with the spoken lines in the target language. The hook shot renders the opening; the
+ * full video walks through every line, each said once. Wan reads English directions and native dialogue.
+ */
 export function buildClipPrompt(req: RenderInput): string {
   const script = scriptOf(req);
   const place = countryName(req.market.country);
+  const lang = languageName(req.market.language);
   if (req.length === "full") {
-    const beats = script.lines
-      .map((l) => `At ${l.t ?? "?"}s: ${l.shot.trim()}${l.gloss ? ` The creator says: "${l.gloss.trim()}"` : ""}`)
-      .join(" ");
+    const lines = [script.hook.target, ...script.lines.map((l) => ("target" in l && typeof l.target === "string" ? l.target : ""))]
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const dialogue = lines.map((t, i) => `${i + 1}) 「${t}」`).join(" ");
+    const shots = script.lines.map((l) => `At ${l.t ?? "?"}s: ${l.shot.trim()}`).join(" ");
     return [
-      `A ${secondsFor(req)}-second vertical social video filmed in ${place} by one creator, friendly and energetic.`,
-      `Opening hook to camera: "${script.hook.gloss.trim()}"`,
-      beats,
+      `A ${secondsFor(req)}-second vertical social video filmed in ${place}. One creator talks to the camera, friendly and energetic.`,
+      `Spoken dialogue in ${lang}, each line said exactly once, in this order, with nothing repeated: ${dialogue}`,
+      `Shots: ${shots}`,
+      keepLine(req),
       STYLE,
     ].join(" ");
   }
@@ -95,10 +148,11 @@ export function buildClipPrompt(req: RenderInput): string {
     .map((l) => l.shot.trim())
     .filter(Boolean);
   return [
-    `Opening shot of a short vertical social video filmed in ${place}.`,
+    `Opening shot of a short vertical social video filmed in ${place}. One creator talks to the camera.`,
     `Idea: ${script.angle.trim()}`,
-    `The hook, spoken to camera: "${script.hook.gloss.trim()}"`,
+    `The hook, spoken once in ${lang}: 「${script.hook.target.trim()}」`,
     shots.length ? `Shots: ${shots.join(" Then: ")}` : "",
+    keepLine(req),
     STYLE,
   ]
     .filter(Boolean)
@@ -227,6 +281,11 @@ export async function startClip(req: RenderInput): Promise<{ job: RenderJob; cac
       };
     }
   }
+  // A finished render for the same script and length replays from the cache, even offline.
+  const cached = await readCache<CachedRender>(RENDER_CACHE, renderCacheKey(prompt, req.length));
+  if (cached?.video_url && cached.status === "done") {
+    return { cached: true, job: { ...cached, variant: req.variant, length: req.length, prompt } };
+  }
   const { key, base, model } = requireVideoApi();
   const body = {
     model,
@@ -236,7 +295,8 @@ export async function startClip(req: RenderInput): Promise<{ job: RenderJob; cac
       resolution: CLIP.resolution,
       ratio: CLIP.ratio,
       duration: seconds,
-      prompt_extend: true,
+      // The prompt is complete. A rewrite by the provider's model added repeated lines.
+      prompt_extend: false,
       watermark: false,
     },
   };
@@ -261,5 +321,6 @@ export async function getClip(id: string, variant: VariantId, length: RenderLeng
     console.error(`[wan] poll HTTP ${status}: ${text.slice(0, 400)}`);
     throw new UpstreamError(`GMI Cloud returned HTTP ${status} for the render status.`);
   }
-  return toJob(json, variant, length, model, json.payload?.prompt ?? "", seconds);
+  const job = toJob(json, variant, length, model, json.payload?.prompt ?? "", seconds);
+  return job.status === "done" ? persistClip(job) : job;
 }

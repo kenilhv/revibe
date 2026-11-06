@@ -1,295 +1,156 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api-client";
+// The shell: a stage rail on the left (a stepper on small screens), the stage screen in the middle.
+// Right arrow continues when a stage shows its result; left arrow goes back.
+
+import { useEffect } from "react";
 import { countryName } from "@/lib/markets";
-import type {
-  ApiMeta,
-  CompoundResponse,
-  DataSource,
-  InputValues,
-  MarketProfile,
-  OutputPack,
-  RelevanceMap,
-  SourceProfile,
-} from "@/lib/types";
-import { InputScreen } from "./screens/input-screen";
-import { MapScreen } from "./screens/map-screen";
-import { OutputScreen } from "./screens/output-screen";
-import { ScanScreen } from "./screens/scan-screen";
-import { Chip, SourceBadge, cx } from "./ui";
+import { AnalyzeScreen } from "./screens/analyze-screen";
+import { BriefScreen } from "./screens/brief-screen";
+import { FinalScreen } from "./screens/final-screen";
+import { MarketScreen } from "./screens/market-screen";
+import { PlanScreen } from "./screens/plan-screen";
+import { useRun } from "./flow/use-run";
+import { STAGE_ORDER, STAGES, type Stage } from "./flow/types";
+import { Chip, cx } from "./ui";
 
-type Step = "input" | "scan" | "map" | "output";
-
-const STEPS: { id: Step; label: string }[] = [
-  { id: "input", label: "Input" },
-  { id: "scan", label: "Market scan" },
-  { id: "map", label: "Relevance map" },
-  { id: "output", label: "Output" },
-];
-
-export const DEFAULT_INPUT: InputValues = {
-  niche: "energy drink",
-  home: { country: "US", language: "en", platform: "tiktok", mode: "example", dataset: null },
-  target: { country: "JP", language: "ja", platform: "recommend", mode: "example", dataset: null },
-  sourceVideoId: null,
-  videoUrl: "",
-};
-
-type MetaKey = "source" | "home" | "target" | "map" | "output";
-
-const META_LABEL: Record<MetaKey, string> = {
-  source: "video",
-  home: "home scan",
-  target: "target scan",
-  map: "map",
-  output: "scripts",
-};
-
-// One badge for the run. When the parts differ (example video, live market scan), the badge says so.
-function overallSource(metas: Partial<Record<MetaKey, ApiMeta>>): { source: DataSource; note?: string; mixed?: string } | null {
-  const entries = (Object.entries(metas) as [MetaKey, ApiMeta | undefined][]).filter((e): e is [MetaKey, ApiMeta] => !!e[1]);
-  if (entries.length === 0) return null;
-  const sources = new Set(entries.map(([, m]) => m.source));
-  if (sources.size === 1) {
-    const [, first] = entries[0];
-    return { source: first.source, note: entries.map(([, m]) => m.note).find(Boolean) };
-  }
-  const word: Record<DataSource, string> = { live: "live", cache: "cached", sample: "example" };
-  const mixed = entries.map(([k, m]) => `${META_LABEL[k]}: ${word[m.source]}`).join(" · ");
-  // Live or cached market data outranks the example video: the numbers on screen are real.
-  const source: DataSource = sources.has("live") ? "live" : "cache";
-  return { source, mixed, note: mixed };
-}
+const SCREENS = {
+  brief: BriefScreen,
+  analyze: AnalyzeScreen,
+  market: MarketScreen,
+  plan: PlanScreen,
+  final: FinalScreen,
+} as const;
 
 export function ReVibeApp() {
-  const [step, setStep] = useState<Step>("input");
-  const [input, setInput] = useState<InputValues>(DEFAULT_INPUT);
-  const [source, setSource] = useState<SourceProfile | null>(null);
-  const [homeMarket, setHomeMarket] = useState<MarketProfile | null>(null);
-  const [targetMarket, setTargetMarket] = useState<MarketProfile | null>(null);
-  const [map, setMap] = useState<RelevanceMap | null>(null);
-  const [output, setOutput] = useState<OutputPack | null>(null);
-  const [metas, setMetas] = useState<Partial<Record<MetaKey, ApiMeta>>>({});
-  const [busy, setBusy] = useState<null | "localize" | "map" | "output">(null);
-  const [error, setError] = useState<string | null>(null);
+  const { run, actions } = useRun();
+  const Screen = SCREENS[run.stage];
+  const current = run.states[run.stage];
+  const index = STAGE_ORDER.indexOf(run.stage);
+  const canContinue = run.stage !== "brief" && run.stage !== "final" && current.phase === "result";
 
-  // Each step opens at the top. The app keeps the scroll position between steps otherwise.
+  // Each stage opens at the top.
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [step]);
+  }, [run.stage]);
 
-  const reached: Record<Step, boolean> = {
-    input: true,
-    scan: !!(source && homeMarket && targetMarket),
-    map: !!map,
-    output: !!output,
-  };
-
-  async function localize(values: InputValues) {
-    setInput(values);
-    setBusy("localize");
-    setError(null);
-    const { home, target } = values;
-    const homePlatform = home.platform === "recommend" ? (home.dataset?.platforms[0]?.platform ?? "tiktok") : home.platform;
-    const [s, h, t] = await Promise.all([
-      api.source({
-        mode: home.mode,
-        dataset_id: home.mode === "csv" ? (home.dataset?.id ?? null) : null,
-        video_id: home.mode === "csv" ? values.sourceVideoId : null,
-        videoUrl: home.mode === "api" ? values.videoUrl.trim() || null : null,
-        niche: values.niche,
-        market: { country: home.country, language: home.language, platform: homePlatform },
-      }),
-      api.scan({
-        mode: home.mode,
-        dataset_id: home.mode === "csv" ? (home.dataset?.id ?? null) : null,
-        niche: values.niche,
-        country: home.country,
-        language: home.language,
-        platform: home.platform,
-      }),
-      api.scan({
-        mode: target.mode,
-        dataset_id: target.mode === "csv" ? (target.dataset?.id ?? null) : null,
-        niche: values.niche,
-        country: target.country,
-        language: target.language,
-        platform: target.platform,
-      }),
-    ]);
-    setBusy(null);
-    if (!s.ok) return setError(`Could not read the source video. ${s.error}`);
-    if (!h.ok) return setError(`Could not scan ${countryName(home.country)}. ${h.error}`);
-    if (!t.ok) return setError(`Could not scan ${countryName(target.country)}. ${t.error}`);
-    setSource(s.data);
-    setHomeMarket(h.data);
-    setTargetMarket(t.data);
-    setMap(null);
-    setOutput(null);
-    setMetas({ source: s.meta, home: h.meta, target: t.meta });
-    setStep("scan");
-  }
-
-  async function buildMap() {
-    if (!source || !targetMarket) return;
-    setBusy("map");
-    setError(null);
-    const r = await api.map({ source, market: targetMarket });
-    setBusy(null);
-    if (!r.ok) return setError(`Could not build the relevance map. ${r.error}`);
-    setMap(r.data);
-    setOutput(null);
-    setMetas((m) => ({ ...m, map: r.meta, output: undefined }));
-    setStep("map");
-  }
-
-  async function writeOutput() {
-    if (!source || !targetMarket || !map) return;
-    setBusy("output");
-    setError(null);
-    const r = await api.output({ source, market: targetMarket, map });
-    setBusy(null);
-    if (!r.ok) return setError(`Could not write the scripts. ${r.error}`);
-    setOutput(r.data);
-    setMetas((m) => ({ ...m, output: r.meta }));
-    setStep("output");
-  }
-
-  async function sendToCompound(): Promise<CompoundResponse> {
-    if (!output || !targetMarket) throw new Error("There is no output to send.");
-    const r = await api.compound({ output, market: targetMarket.market });
-    if (!r.ok) throw new Error(r.error);
-    return r.data;
-  }
-
-  function goTo(next: Step) {
-    if (reached[next] && !busy) {
-      setError(null);
-      setStep(next);
+  // Keyboard: arrows move between stages. Typing in a field never triggers them.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
+      if (e.key === "ArrowRight" && canContinue) actions.next();
+      if (e.key === "ArrowLeft" && index > 0) actions.back();
     }
-  }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [actions, canContinue, index]);
 
-  function restart() {
-    if (busy) return;
-    setStep("input");
-    setError(null);
-  }
-
-  const badge = overallSource(metas);
-  const route = source && targetMarket ? `${source.market.country} → ${targetMarket.market.country}` : null;
+  const route = run.data.source && run.stage !== "brief" ? `${countryName(run.brief.home.country)} → ${countryName(run.brief.target.country)}` : null;
+  const live = Object.values(run.data.metas).some((m) => m?.source === "live" || m?.source === "cache");
+  const sample = Object.values(run.data.metas).some((m) => m?.source === "sample");
 
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-20 border-b border-line bg-bg/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
           <button
             type="button"
-            onClick={restart}
-            aria-label="ReVibe, back to input"
+            onClick={actions.restart}
+            aria-label="ReVibe, start over"
             className="flex items-baseline gap-0.5 font-display text-xl font-bold tracking-tight"
           >
             <span className="text-accent">Re</span>
             <span>Vibe</span>
           </button>
-
-          <nav aria-label="Steps" className="order-3 w-full overflow-x-auto sm:order-none sm:w-auto sm:flex-1">
+          <nav aria-label="Stages" className="min-w-0 flex-1 overflow-x-auto lg:hidden">
             <ol className="flex min-w-max items-center gap-1">
-              {STEPS.map((s, i) => {
-                const active = s.id === step;
-                const enabled = reached[s.id] && !busy;
-                return (
-                  <li key={s.id} className="flex items-center gap-1">
-                    {i > 0 && <span aria-hidden="true" className="h-px w-4 bg-line-strong sm:w-6" />}
-                    <button
-                      type="button"
-                      onClick={() => goTo(s.id)}
-                      disabled={!enabled}
-                      aria-current={active ? "step" : undefined}
-                      className={cx(
-                        "flex items-center gap-2 rounded-full px-2.5 py-1 text-sm transition",
-                        active ? "bg-ink text-bg" : enabled ? "text-ink hover:bg-surface-2" : "text-faint",
-                      )}
-                    >
-                      <span
-                        className={cx(
-                          "tabular grid size-5 place-items-center rounded-full font-mono text-[0.68rem]",
-                          active ? "bg-bg text-ink" : reached[s.id] ? "bg-keep text-keep-ink" : "border border-line-strong",
-                        )}
-                      >
-                        {i + 1}
-                      </span>
-                      {s.label}
-                    </button>
-                  </li>
-                );
-              })}
+              {STAGES.map((s, i) => (
+                <li key={s.id}>
+                  <StageButton stage={s.id} label={s.label} n={i + 1} run={run} onClick={() => actions.goTo(s.id)} compact />
+                </li>
+              ))}
             </ol>
           </nav>
-
           <div className="ml-auto flex items-center gap-2">
-            {route && (
-              <span className="tabular rounded-md border border-line px-2 py-0.5 font-mono text-xs text-muted">{route}</span>
-            )}
-            {badge &&
-              (badge.mixed ? (
-                <span title={badge.mixed} className="min-w-0">
-                  <Chip tone="keep" className="max-w-[60vw] truncate">
-                    {badge.mixed}
-                  </Chip>
-                </span>
-              ) : (
-                <SourceBadge source={badge.source} note={badge.note} />
-              ))}
+            {route && <span className="tabular hidden rounded-md border border-line px-2 py-0.5 font-mono text-xs text-muted sm:inline">{route}</span>}
+            {run.stage !== "brief" && (live ? <Chip tone="keep">Real data</Chip> : sample ? <Chip tone="gold">Example data</Chip> : null)}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <div key={step} className="rv-enter">
-          {step === "input" && <InputScreen initial={input} busy={busy === "localize"} error={error} onSubmit={localize} />}
-          {step === "scan" && source && homeMarket && targetMarket && (
-            <ScanScreen
-              source={source}
-              homeMarket={homeMarket}
-              targetMarket={targetMarket}
-              busy={busy === "map"}
-              error={error}
-              onNext={buildMap}
-              onBack={() => goTo("input")}
-            />
-          )}
-          {step === "map" && source && targetMarket && map && (
-            <MapScreen
-              source={source}
-              market={targetMarket}
-              map={map}
-              busy={busy === "output"}
-              error={error}
-              onNext={writeOutput}
-              onBack={() => goTo("scan")}
-            />
-          )}
-          {step === "output" && source && targetMarket && map && output && (
-            <OutputScreen
-              source={source}
-              market={targetMarket}
-              map={map}
-              output={output}
-              onSendToCompound={sendToCompound}
-              onBack={() => goTo("map")}
-              onRestart={restart}
-            />
-          )}
-        </div>
-      </main>
+      <div className="mx-auto flex w-full max-w-7xl flex-1 gap-8 px-4 py-8 sm:px-6 lg:py-10">
+        <aside className="hidden w-56 shrink-0 lg:block" aria-label="Stages">
+          <ol className="sticky top-24 flex flex-col gap-1">
+            {STAGES.map((s, i) => (
+              <li key={s.id}>
+                <StageButton stage={s.id} label={s.label} n={i + 1} run={run} onClick={() => actions.goTo(s.id)} />
+              </li>
+            ))}
+          </ol>
+          <p className="mt-6 px-3 text-xs leading-relaxed text-faint">← → move between stages</p>
+        </aside>
+
+        <main className="min-w-0 flex-1">
+          <div key={run.stage} className="rv-enter">
+            <Screen run={run} actions={actions} />
+          </div>
+        </main>
+      </div>
 
       <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-muted sm:px-6">
-          <span>Video data: Oriane · Models: GMI Cloud · Edit and post: Compound</span>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-muted sm:px-6">
+          <span>Video data: Oriane · Models and renders: GMI Cloud, Wan 3.0 · Edit and post: Compound</span>
           <span className="font-mono">Hack the Feed · 2026</span>
         </div>
       </footer>
     </div>
+  );
+}
+
+function StageButton({
+  stage,
+  label,
+  n,
+  run,
+  onClick,
+  compact = false,
+}: {
+  stage: Stage;
+  label: string;
+  n: number;
+  run: ReturnType<typeof useRun>["run"];
+  onClick: () => void;
+  compact?: boolean;
+}) {
+  const active = run.stage === stage;
+  const reachable = STAGE_ORDER.indexOf(stage) <= STAGE_ORDER.indexOf(run.reached);
+  const phase = run.states[stage].phase;
+  const done = phase === "result" || (stage === "brief" && run.reached !== "brief");
+  const running = phase === "running";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!reachable || run.busy}
+      aria-current={active ? "step" : undefined}
+      className={cx(
+        "flex w-full items-center gap-3 rounded-lg text-left text-sm transition",
+        compact ? "px-2.5 py-1.5" : "px-3 py-2.5",
+        active ? "bg-ink text-bg" : reachable ? "text-ink hover:bg-surface-2" : "text-faint",
+        "disabled:cursor-not-allowed",
+      )}
+    >
+      <span
+        className={cx(
+          "tabular grid size-6 shrink-0 place-items-center rounded-full font-mono text-[0.68rem]",
+          active ? "bg-bg text-ink" : done ? "bg-keep text-keep-ink" : running ? "border border-accent text-accent" : "border border-line-strong",
+        )}
+      >
+        {done && !active ? "✓" : n}
+      </span>
+      <span className="truncate">{label}</span>
+      {running && !active && <span aria-hidden="true" className="ml-auto size-1.5 animate-pulse rounded-full bg-accent" />}
+    </button>
   );
 }
