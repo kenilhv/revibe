@@ -194,7 +194,7 @@ export function InputScreen({ initial, busy, error, onSubmit }: InputScreenProps
             className="w-full sm:w-auto"
           >
             {busy ? (
-              "Scanning 2 markets…"
+              "Scanning 2 markets… A live Oriane scan takes 1 to 2 minutes."
             ) : (
               <>
                 Localize

@@ -140,13 +140,15 @@ export function PreviewClip({
             </div>
           )}
           <div className="flex flex-wrap items-center gap-3">
-            <Button loading={busy} onClick={generate} variant="keep">
-              {state.status === "done" ? "Render again" : "Generate preview"}
-            </Button>
+            {!(state.status === "done" && cached) && (
+              <Button loading={busy} onClick={generate} variant="keep">
+                {state.status === "done" ? "Render again" : "Generate preview"}
+              </Button>
+            )}
             <span role="status" className="text-sm text-muted">
               {state.status === "starting" && "Sending the shot to Wan 3.0…"}
               {state.status === "waiting" && `Rendering… ${elapsed}s. Clips take 1 to 3 minutes.`}
-              {state.status === "done" && (cached ? "From the cache. Render again for a live clip." : "Live render done.")}
+              {state.status === "done" && (cached ? "Pre-rendered for the example script with Wan 3.0." : "Live render done.")}
               {state.status === "idle" && "720P · 9:16 · 5 s · about $0.50 per render"}
             </span>
           </div>

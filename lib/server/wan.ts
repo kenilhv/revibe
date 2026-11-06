@@ -2,6 +2,7 @@ import "server-only";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import sampleOutput from "@/data/samples/output-us-jp.json";
 import { countryName } from "@/lib/markets";
 import type { RenderJob, RenderStatus, VariantId } from "@/lib/types";
 import { config, isOffline } from "./env";
@@ -146,10 +147,19 @@ function toJob(j: GmiJob, variant: VariantId, model: string, prompt: string): Re
   };
 }
 
-/** Start a clip, or return the cached clip for the example video. */
+/** True when the requested script is the bundled example script, so its pre-rendered clip fits it. */
+function isExampleScript(req: RenderInput): boolean {
+  if (req.source_video_id !== EXAMPLE_SOURCE_ID) return false;
+  const requested = req.output.scripts.find((s) => s.id === req.variant);
+  const sample = (sampleOutput as { scripts: { id: string; hook: { target: string } }[] }).scripts.find((s) => s.id === req.variant);
+  return !!requested && !!sample && requested.hook.target.trim() === sample.hook.target.trim();
+}
+
+/** Start a clip, or return the cached clip for the example script. */
 export async function startClip(req: RenderInput): Promise<{ job: RenderJob; cached: boolean }> {
   const prompt = buildClipPrompt(req);
-  if (req.source_video_id === EXAMPLE_SOURCE_ID) {
+  // A live market scan writes different scripts for the example video. Those get a live render.
+  if (isExampleScript(req)) {
     const clip = exampleClipPath(req.variant);
     // Next serves public/ itself. The ignore comment stops the build from tracing the whole project.
     if (existsSync(/*turbopackIgnore: true*/ clip.file)) {

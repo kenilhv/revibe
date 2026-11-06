@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import { countryName } from "@/lib/markets";
 import type {
@@ -17,7 +17,7 @@ import { InputScreen } from "./screens/input-screen";
 import { MapScreen } from "./screens/map-screen";
 import { OutputScreen } from "./screens/output-screen";
 import { ScanScreen } from "./screens/scan-screen";
-import { SourceBadge, cx } from "./ui";
+import { Chip, SourceBadge, cx } from "./ui";
 
 type Step = "input" | "scan" | "map" | "output";
 
@@ -38,15 +38,28 @@ export const DEFAULT_INPUT: InputValues = {
 
 type MetaKey = "source" | "home" | "target" | "map" | "output";
 
-// The weakest source wins: one example response makes the whole run "Example data".
-function overallSource(metas: Partial<Record<MetaKey, ApiMeta>>): { source: DataSource; note?: string } | null {
-  const list = Object.values(metas).filter((m): m is ApiMeta => !!m);
-  if (list.length === 0) return null;
-  const sample = list.find((m) => m.source === "sample");
-  if (sample) return { source: "sample", note: sample.note };
-  const cache = list.find((m) => m.source === "cache");
-  if (cache) return { source: "cache", note: cache.note };
-  return { source: "live" };
+const META_LABEL: Record<MetaKey, string> = {
+  source: "video",
+  home: "home scan",
+  target: "target scan",
+  map: "map",
+  output: "scripts",
+};
+
+// One badge for the run. When the parts differ (example video, live market scan), the badge says so.
+function overallSource(metas: Partial<Record<MetaKey, ApiMeta>>): { source: DataSource; note?: string; mixed?: string } | null {
+  const entries = (Object.entries(metas) as [MetaKey, ApiMeta | undefined][]).filter((e): e is [MetaKey, ApiMeta] => !!e[1]);
+  if (entries.length === 0) return null;
+  const sources = new Set(entries.map(([, m]) => m.source));
+  if (sources.size === 1) {
+    const [, first] = entries[0];
+    return { source: first.source, note: entries.map(([, m]) => m.note).find(Boolean) };
+  }
+  const word: Record<DataSource, string> = { live: "live", cache: "cached", sample: "example" };
+  const mixed = entries.map(([k, m]) => `${META_LABEL[k]}: ${word[m.source]}`).join(" · ");
+  // Live or cached market data outranks the example video: the numbers on screen are real.
+  const source: DataSource = sources.has("live") ? "live" : "cache";
+  return { source, mixed, note: mixed };
 }
 
 export function ReVibeApp() {
@@ -60,6 +73,11 @@ export function ReVibeApp() {
   const [metas, setMetas] = useState<Partial<Record<MetaKey, ApiMeta>>>({});
   const [busy, setBusy] = useState<null | "localize" | "map" | "output">(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Each step opens at the top. The app keeps the scroll position between steps otherwise.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [step]);
 
   const reached: Record<Step, boolean> = {
     input: true,
@@ -213,7 +231,16 @@ export function ReVibeApp() {
             {route && (
               <span className="tabular rounded-md border border-line px-2 py-0.5 font-mono text-xs text-muted">{route}</span>
             )}
-            {badge && <SourceBadge source={badge.source} note={badge.note} />}
+            {badge &&
+              (badge.mixed ? (
+                <span title={badge.mixed} className="min-w-0">
+                  <Chip tone="keep" className="max-w-[60vw] truncate">
+                    {badge.mixed}
+                  </Chip>
+                </span>
+              ) : (
+                <SourceBadge source={badge.source} note={badge.note} />
+              ))}
           </div>
         </div>
       </header>
