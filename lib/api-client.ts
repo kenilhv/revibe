@@ -17,7 +17,6 @@ import type {
   SourceProfile,
   SourceRequest,
   UploadRequest,
-  VariantId,
 } from "./types";
 
 async function post<T>(path: string, body: unknown): Promise<ApiResult<T>> {
@@ -55,6 +54,8 @@ export const api = {
   output: (req: OutputRequest) => post<OutputPack>("/api/output", req),
   compound: (req: CompoundRequest) => post<CompoundResponse>("/api/compound", req),
   render: (req: RenderRequest) => post<RenderJob>("/api/render", req),
-  renderStatus: (id: string, variant: VariantId) =>
-    get<RenderJob>(`/api/render?id=${encodeURIComponent(id)}&variant=${encodeURIComponent(variant)}`),
+  renderStatus: (job: Pick<RenderJob, "id" | "variant" | "length" | "seconds">) =>
+    get<RenderJob>(
+      `/api/render?id=${encodeURIComponent(job.id)}&variant=${encodeURIComponent(job.variant)}&length=${encodeURIComponent(job.length)}&seconds=${job.seconds}`,
+    ),
 };

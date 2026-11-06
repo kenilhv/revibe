@@ -351,8 +351,12 @@ export interface CompoundResponse {
 
 // Preview clip: a short AI render of one script variant, made with Wan 3.0 on GMI Cloud.
 
+/** "hook": the opening shot, 5 s. "full": the whole script, up to 30 s. */
+export type RenderLength = "hook" | "full";
+
 export interface RenderRequest {
   variant: VariantId;
+  length?: RenderLength;
   output: OutputPack;
   market: Market;
   /** SourceProfile.video.id. The example video gets a cached clip. */
@@ -365,6 +369,7 @@ export interface RenderJob {
   /** GMI request id, or "cache:<variant>" for a bundled clip. */
   id: string;
   variant: VariantId;
+  length: RenderLength;
   status: RenderStatus;
   model: string;
   prompt: string;

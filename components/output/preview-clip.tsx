@@ -1,16 +1,17 @@
 "use client";
 
-// A short AI preview of one script variant, rendered with Wan 3.0 on GMI Cloud. It shows the hook shot
-// as a moving storyboard. It is not the creator's final video.
+// AI renders of one script variant with Wan 3.0 on GMI Cloud: the hook shot (5 s) as a moving storyboard,
+// or the full video (up to 30 s) as a first draft. Neither is the creator's final video.
 
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api-client";
 import { countryName } from "@/lib/markets";
-import type { MarketProfile, OutputPack, RenderJob, VariantId } from "@/lib/types";
+import type { MarketProfile, OutputPack, RenderJob, RenderLength, VariantId } from "@/lib/types";
 import { Button, Card, Chip, ErrorNote, cx } from "../ui";
 
 const LABEL = "font-mono text-[0.68rem] font-medium uppercase tracking-[0.1em] text-muted";
 const POLL_MS = 4000;
+const USD_PER_SECOND = 0.1;
 
 type ClipState =
   | { status: "idle" }
@@ -34,6 +35,7 @@ export function PreviewClip({
   className?: string;
 }) {
   const [variant, setVariant] = useState<VariantId>(output.scripts[0]?.id ?? "A");
+  const [length, setLength] = useState<RenderLength>("hook");
   const [state, setState] = useState<ClipState>({ status: "idle" });
   const [elapsed, setElapsed] = useState(0);
   const alive = useRef(true);
@@ -51,7 +53,7 @@ export function PreviewClip({
     const { job, started } = state;
     const tick = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000);
     const poll = setInterval(async () => {
-      const r = await api.renderStatus(job.id, job.variant);
+      const r = await api.renderStatus(job);
       if (!alive.current) return;
       if (!r.ok) {
         setState({ status: "error", message: r.error });
@@ -69,12 +71,15 @@ export function PreviewClip({
 
   const script = output.scripts.find((s) => s.id === variant) ?? output.scripts[0];
   const busy = state.status === "starting" || state.status === "waiting";
+  const fullSeconds = Math.min(30, Math.max(5, Math.round(script?.duration_sec ?? 24)));
+  const seconds = length === "full" ? fullSeconds : 5;
+  const cost = (seconds * USD_PER_SECOND).toFixed(2);
 
   async function generate() {
     if (busy) return;
     setState({ status: "starting" });
     setElapsed(0);
-    const r = await api.render({ variant, output, market: market.market, source_video_id: sourceVideoId });
+    const r = await api.render({ variant, length, output, market: market.market, source_video_id: sourceVideoId });
     if (!alive.current) return;
     if (!r.ok) {
       setState({ status: "error", message: r.error });
@@ -85,39 +90,47 @@ export function PreviewClip({
     else setState({ status: "waiting", job: r.data, started: Date.now() });
   }
 
-  function pick(id: VariantId) {
+  function pickVariant(id: VariantId) {
     if (busy) return;
     setVariant(id);
     setState({ status: "idle" });
   }
 
+  function pickLength(next: RenderLength) {
+    if (busy) return;
+    setLength(next);
+    setState({ status: "idle" });
+  }
+
   const job = state.status === "done" ? state.job : state.status === "waiting" ? state.job : null;
   const cached = job?.id.startsWith("cache:") ?? false;
+  const title = length === "full" ? "See the whole video as a first draft" : "See the hook shot move";
+  const lede =
+    length === "full"
+      ? `A ${fullSeconds}-second AI draft of script ${script?.id ?? ""} for ${countryName(market.market.country)}, shot by shot. It shows the creator what to film. It is not the final video.`
+      : `A 5-second render of the opening shot for ${countryName(market.market.country)}. It is a moving storyboard for the shoot, not the final video.`;
 
   return (
     <Card className={cx("flex flex-col gap-5 border-t-[3px] border-t-keep p-5 sm:p-6", className)}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className={LABEL}>Preview clip · Wan 3.0 on GMI Cloud</span>
-        <Chip tone="gold">AI preview</Chip>
+        <span className={LABEL}>{length === "full" ? "Full video" : "Preview clip"} · Wan 3.0 on GMI Cloud</span>
+        <Chip tone="gold">AI render</Chip>
         {cached && <Chip tone="neutral">Cached</Chip>}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <h2 className="font-display text-xl font-semibold">See the hook shot move</h2>
-        <p className="text-sm leading-relaxed text-muted">
-          A 5-second render of the opening shot for {countryName(market.market.country)}. It is a moving storyboard for the
-          shoot, not the final video.
-        </p>
+        <h2 className="font-display text-xl font-semibold">{title}</h2>
+        <p className="text-sm leading-relaxed text-muted">{lede}</p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-6">
-        <div className="flex flex-col gap-3 sm:w-64 sm:shrink-0">
+        <div className="flex flex-col gap-3 sm:w-72 sm:shrink-0">
           <div role="group" aria-label="Script variant" className="flex gap-1.5">
             {output.scripts.map((s) => (
               <button
                 key={s.id}
                 type="button"
-                onClick={() => pick(s.id)}
+                onClick={() => pickVariant(s.id)}
                 disabled={busy}
                 aria-pressed={s.id === variant}
                 className={cx(
@@ -129,6 +142,28 @@ export function PreviewClip({
               </button>
             ))}
           </div>
+          <div role="group" aria-label="Clip length" className="flex gap-1.5">
+            {(
+              [
+                ["hook", "Hook shot · 5 s"],
+                ["full", `Full video · ${fullSeconds} s`],
+              ] as [RenderLength, string][]
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => pickLength(id)}
+                disabled={busy}
+                aria-pressed={id === length}
+                className={cx(
+                  "tabular flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed",
+                  id === length ? "border-keep bg-keep-soft text-keep" : "border-line bg-surface text-ink hover:bg-surface-2",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {script && (
             <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface-2 px-3 py-2.5">
               <span className="text-sm font-medium">{script.name}</span>
@@ -136,20 +171,21 @@ export function PreviewClip({
                 {script.hook.target}
               </span>
               <span className="text-xs text-muted">{script.hook.gloss}</span>
-              <span className="mt-1 text-xs text-muted">{script.lines[0]?.shot}</span>
+              <span className="mt-1 text-xs text-muted">{length === "full" ? `${script.lines.length + 1} shots` : script.lines[0]?.shot}</span>
             </div>
           )}
           <div className="flex flex-wrap items-center gap-3">
             {!(state.status === "done" && cached) && (
               <Button loading={busy} onClick={generate} variant="keep">
-                {state.status === "done" ? "Render again" : "Generate preview"}
+                {state.status === "done" ? "Render again" : length === "full" ? "Render full video" : "Generate preview"}
               </Button>
             )}
             <span role="status" className="text-sm text-muted">
-              {state.status === "starting" && "Sending the shot to Wan 3.0…"}
-              {state.status === "waiting" && `Rendering… ${elapsed}s. Clips take 1 to 3 minutes.`}
+              {state.status === "starting" && "Sending the script to Wan 3.0…"}
+              {state.status === "waiting" &&
+                `Rendering… ${elapsed}s. ${length === "full" ? "Full videos take 10 to 20 minutes." : "Clips take 1 to 3 minutes."}`}
               {state.status === "done" && (cached ? "Pre-rendered for the example script with Wan 3.0." : "Live render done.")}
-              {state.status === "idle" && "720P · 9:16 · 5 s · about $0.50 per render"}
+              {state.status === "idle" && `720P · 9:16 · ${seconds} s · about $${cost} per render`}
             </span>
           </div>
         </div>
@@ -161,9 +197,9 @@ export function PreviewClip({
               src={state.job.video_url}
               controls
               playsInline
-              loop
+              loop={length !== "full"}
               className="max-h-[480px] w-auto max-w-full rounded-lg border border-line bg-ink"
-              aria-label={`Preview clip for variant ${state.job.variant}`}
+              aria-label={`${length === "full" ? "Full video" : "Preview clip"} for variant ${state.job.variant}`}
             />
           ) : (
             <div
@@ -176,10 +212,11 @@ export function PreviewClip({
         </div>
       </div>
 
-      {state.status === "error" && <ErrorNote message={`Could not render the preview. ${state.message}`} onRetry={generate} />}
+      {state.status === "error" && <ErrorNote message={`Could not render the clip. ${state.message}`} onRetry={generate} />}
       {state.status === "done" && (
         <p className="text-xs text-muted">
-          Model {state.job.model} · {state.job.resolution} · {state.job.ratio} · {state.job.seconds} s · list price ${state.job.cost_usd.toFixed(2)}
+          Model {state.job.model} · {state.job.resolution} · {state.job.ratio} · {state.job.seconds} s · list price $
+          {state.job.cost_usd.toFixed(2)}
         </p>
       )}
     </Card>
