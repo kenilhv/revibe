@@ -1,0 +1,67 @@
+{
+  "market": { "country": "US", "language": "en", "platform": "tiktok" },
+  "niche": "energy drink",
+  "sample": { "n": 200, "days": 90, "total_views": 61200000, "median_views": 140000 },
+  "hooks": [
+    { "key": "claim", "share": 0.29, "examples": ["us-002", "us-004"] },
+    { "key": "pov", "share": 0.26, "examples": ["us-001"] },
+    { "key": "question", "share": 0.17, "examples": ["us-006"] },
+    { "key": "review", "share": 0.14, "examples": ["us-003"] },
+    { "key": "story", "share": 0.09, "examples": ["us-005"] },
+    { "key": "shock", "share": 0.05, "examples": [] }
+  ],
+  "formats": [
+    { "key": "day_in_life", "share": 0.27, "examples": ["us-001", "us-005"] },
+    { "key": "talking_head", "share": 0.24, "examples": ["us-004", "us-006"] },
+    { "key": "pov", "share": 0.21, "examples": ["us-002"] },
+    { "key": "product_review", "share": 0.15, "examples": ["us-003"] },
+    { "key": "skit", "share": 0.13, "examples": [] }
+  ],
+  "sounds": [
+    { "key": "phonk", "share": 0.34, "examples": ["us-001", "us-004"] },
+    { "key": "trap beat", "share": 0.21, "examples": ["us-002"] },
+    { "key": "voiceover only", "share": 0.18, "examples": ["us-003", "us-006"] },
+    { "key": "rock anthem", "share": 0.12, "examples": [] },
+    { "key": "lo-fi", "share": 0.07, "examples": ["us-005"] }
+  ],
+  "objects": [
+    { "key": "energy drink can", "share": 0.71, "examples": ["us-001", "us-002", "us-003", "us-005", "us-006"] },
+    { "key": "gym", "share": 0.34, "examples": ["us-001", "us-004", "us-006"] },
+    { "key": "truck", "share": 0.22, "examples": ["us-002", "us-003"] },
+    { "key": "tailgate", "share": 0.18, "examples": ["us-002"] },
+    { "key": "shaker bottle", "share": 0.15, "examples": ["us-004", "us-006"] },
+    { "key": "sunrise run", "share": 0.11, "examples": ["us-005"] },
+    { "key": "headphones", "share": 0.1, "examples": ["us-001"] },
+    { "key": "dog", "share": 0.06, "examples": [] }
+  ],
+  "phrases": [
+    { "key": "let's go", "share": 0.24, "examples": ["us-001", "us-002"] },
+    { "key": "no days off", "share": 0.19, "examples": ["us-004"] },
+    { "key": "built different", "share": 0.15, "examples": [] },
+    { "key": "pre-workout", "share": 0.13, "examples": ["us-006"] },
+    { "key": "zero sugar", "share": 0.12, "examples": ["us-003"] },
+    { "key": "game day", "share": 0.1, "examples": ["us-002"] },
+    { "key": "5am club", "share": 0.09, "examples": ["us-001"] },
+    { "key": "gymtok", "share": 0.08, "examples": [] },
+    { "key": "grind", "share": 0.06, "examples": ["us-004"] }
+  ],
+  "creators": [
+    { "handle": "fivea.club", "platform": "tiktok", "followers": 1200000, "avg_views": 820000, "style": "5 AM gym day-in-the-life", "country": "US", "url": null },
+    { "handle": "tailgate.tom", "platform": "tiktok", "followers": 640000, "avg_views": 510000, "style": "Game-day tailgate food and drinks", "country": "US", "url": null },
+    { "handle": "gasstation.ratings", "platform": "tiktok", "followers": 910000, "avg_views": 450000, "style": "Rates every drink at the gas station", "country": "US", "url": null },
+    { "handle": "liftwithmaria", "platform": "instagram", "followers": 380000, "avg_views": 210000, "style": "Strength training and supplements", "country": "US", "url": null }
+  ],
+  "platform_mix": [
+    { "platform": "tiktok", "share": 0.64 },
+    { "platform": "instagram", "share": 0.36 }
+  ],
+  "recommended_platform": { "platform": "tiktok", "reason": "64% of top videos in this niche are on TikTok." },
+  "videos": [
+    { "id": "us-001", "url": null, "platform": "tiktok", "creator": "fivea.club", "followers": 1200000, "views": 3200000, "likes": 410000, "posted_at": "2026-10-03", "caption": "5AM club check-in #gymtok", "hook_text": "POV: it's 5AM and you still showed up.", "tags": ["gym", "energy drink can", "headphones"] },
+    { "id": "us-002", "url": null, "platform": "tiktok", "creator": "tailgate.tom", "followers": 640000, "views": 2400000, "likes": 260000, "posted_at": "2026-09-20", "caption": "Game day fuel check", "hook_text": "Tailgate fuel check. Let's go.", "tags": ["tailgate", "truck", "energy drink can"] },
+    { "id": "us-003", "url": null, "platform": "tiktok", "creator": "gasstation.ratings", "followers": 910000, "views": 1900000, "likes": 120000, "posted_at": "2026-10-11", "caption": "Every zero sugar energy drink, rated", "hook_text": "I rated every energy drink at this gas station.", "tags": ["energy drink can", "truck"] },
+    { "id": "us-004", "url": null, "platform": "instagram", "creator": "liftwithmaria", "followers": 380000, "views": 1500000, "likes": 140000, "posted_at": "2026-08-28", "caption": "No days off. Ever.", "hook_text": "No days off. That is the whole video.", "tags": ["gym", "shaker bottle"] },
+    { "id": "us-005", "url": null, "platform": "tiktok", "creator": "fivea.club", "followers": 1200000, "views": 1100000, "likes": 98000, "posted_at": "2026-10-19", "caption": "6 miles before sunrise", "hook_text": "Six miles before sunrise, one can.", "tags": ["sunrise run", "energy drink can"] },
+    { "id": "us-006", "url": null, "platform": "instagram", "creator": "liftwithmaria", "followers": 380000, "views": 900000, "likes": 76000, "posted_at": "2026-09-07", "caption": "Pre-workout or energy drink?", "hook_text": "Is this better than your pre-workout?", "tags": ["gym", "shaker bottle", "energy drink can"] }
+  ]
+}

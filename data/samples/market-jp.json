@@ -1,0 +1,87 @@
+{
+  "market": { "country": "JP", "language": "ja", "platform": "instagram" },
+  "niche": "energy drink",
+  "sample": { "n": 200, "days": 90, "total_views": 38400000, "median_views": 92000 },
+  "hooks": [
+    { "key": "question", "share": 0.31, "examples": ["jp-001", "jp-003", "jp-008", "jp-009", "jp-012", "jp-013"] },
+    { "key": "pov", "share": 0.24, "examples": ["jp-002", "jp-005", "jp-006", "jp-010", "jp-015"] },
+    { "key": "review", "share": 0.18, "examples": ["jp-004", "jp-014"] },
+    { "key": "story", "share": 0.11, "examples": ["jp-007", "jp-011"] },
+    { "key": "claim", "share": 0.08, "examples": ["jp-016"] },
+    { "key": "shock", "share": 0.05, "examples": [] }
+  ],
+  "formats": [
+    { "key": "pov", "share": 0.29, "examples": ["jp-002", "jp-006", "jp-010", "jp-015"] },
+    { "key": "day_in_life", "share": 0.23, "examples": ["jp-005", "jp-007", "jp-011", "jp-016"] },
+    { "key": "product_review", "share": 0.19, "examples": ["jp-001", "jp-004", "jp-009", "jp-014"] },
+    { "key": "talking_head", "share": 0.12, "examples": ["jp-003", "jp-008"] },
+    { "key": "skit", "share": 0.09, "examples": ["jp-012"] },
+    { "key": "street_interview", "share": 0.08, "examples": ["jp-013"] }
+  ],
+  "sounds": [
+    { "key": "city pop", "share": 0.27, "examples": ["jp-001", "jp-005", "jp-007", "jp-011"] },
+    { "key": "lo-fi", "share": 0.22, "examples": ["jp-002", "jp-010", "jp-015"] },
+    { "key": "voiceover only", "share": 0.18, "examples": ["jp-004", "jp-009", "jp-014"] },
+    { "key": "anime ost", "share": 0.12, "examples": ["jp-006", "jp-012"] },
+    { "key": "j-rock", "share": 0.08, "examples": ["jp-013"] },
+    { "key": "phonk", "share": 0.02, "examples": [] }
+  ],
+  "objects": [
+    { "key": "energy drink can", "share": 0.68, "examples": ["jp-001", "jp-002", "jp-004", "jp-005"] },
+    { "key": "konbini", "gloss": "convenience store", "share": 0.31, "examples": ["jp-001", "jp-004", "jp-009", "jp-014", "jp-016"] },
+    { "key": "train platform", "share": 0.24, "examples": ["jp-002", "jp-005", "jp-007", "jp-010"] },
+    { "key": "office desk", "share": 0.2, "examples": ["jp-005", "jp-006", "jp-008", "jp-016"] },
+    { "key": "vending machine", "share": 0.16, "examples": ["jp-003", "jp-013"] },
+    { "key": "ramen counter", "share": 0.09, "examples": ["jp-007", "jp-012"] },
+    { "key": "umbrella", "share": 0.07, "examples": ["jp-002", "jp-010"] },
+    { "key": "bicycle", "share": 0.06, "examples": ["jp-003", "jp-015"] },
+    { "key": "gym", "share": 0.04, "examples": ["jp-011"] },
+    { "key": "shaker bottle", "share": 0.03, "examples": [] }
+  ],
+  "phrases": [
+    { "key": "今日も一日がんばろう", "gloss": "let's do our best today too", "share": 0.21, "examples": ["jp-005", "jp-007", "jp-016"] },
+    { "key": "いくぞ", "gloss": "let's go", "share": 0.17, "examples": ["jp-006", "jp-011"] },
+    { "key": "コンビニ新作", "gloss": "new at the konbini", "share": 0.15, "examples": ["jp-001", "jp-009", "jp-014"] },
+    { "key": "朝のルーティン", "gloss": "morning routine", "share": 0.14, "examples": ["jp-005", "jp-010"] },
+    { "key": "正直レビュー", "gloss": "honest review", "share": 0.12, "examples": ["jp-004", "jp-014"] },
+    { "key": "仕事前", "gloss": "before work", "share": 0.11, "examples": ["jp-005", "jp-006"] },
+    { "key": "これ飲んだら", "gloss": "once I drink this", "share": 0.09, "examples": ["jp-008", "jp-012"] },
+    { "key": "期間限定", "gloss": "limited time", "share": 0.08, "examples": ["jp-009"] }
+  ],
+  "creators": [
+    { "handle": "salaryman.daily", "platform": "instagram", "followers": 330000, "avg_views": 620000, "style": "5 AM salaryman day-in-the-life", "country": "JP", "url": null },
+    { "handle": "jp.street.facts", "platform": "instagram", "followers": 520000, "avg_views": 400000, "style": "Street facts and vending machine trivia", "country": "JP", "url": null },
+    { "handle": "konbini.tasting", "platform": "instagram", "followers": 412000, "avg_views": 310000, "style": "Konbini new-product reviews", "country": "JP", "url": null },
+    { "handle": "shibuya.commute", "platform": "tiktok", "followers": 268000, "avg_views": 210000, "style": "First-train commute POV", "country": "JP", "url": null },
+    { "handle": "overtime.tanaka", "platform": "tiktok", "followers": 140000, "avg_views": 180000, "style": "Office life and overtime humor", "country": "JP", "url": null },
+    { "handle": "asa.routine.yuki", "platform": "instagram", "followers": 230000, "avg_views": 160000, "style": "Morning routine and office life", "country": "JP", "url": null },
+    { "handle": "enadori.lab", "platform": "instagram", "followers": 98000, "avg_views": 120000, "style": "Energy drink comparisons", "country": "JP", "url": null },
+    { "handle": "tokyo.lift.ken", "platform": "instagram", "followers": 155000, "avg_views": 95000, "style": "Gym routine of a salaryman lifter", "country": "JP", "url": null }
+  ],
+  "platform_mix": [
+    { "platform": "instagram", "share": 0.54 },
+    { "platform": "tiktok", "share": 0.46 }
+  ],
+  "recommended_platform": {
+    "platform": "instagram",
+    "reason": "54% of top videos in this niche are Instagram Reels. TikTok is 46%. Post to Reels first, then TikTok."
+  },
+  "videos": [
+    { "id": "jp-001", "url": null, "platform": "instagram", "creator": "konbini.tasting", "followers": 412000, "views": 2100000, "likes": 98000, "posted_at": "2026-10-21", "caption": "コンビニ新作エナドリ、全部飲んでみた #コンビニ新作", "hook_text": "コンビニ新作、これ知ってる？", "tags": ["konbini", "energy drink can"] },
+    { "id": "jp-002", "url": null, "platform": "tiktok", "creator": "shibuya.commute", "followers": 268000, "views": 1600000, "likes": 121000, "posted_at": "2026-10-05", "caption": "始発の朝はこれから #朝のルーティン", "hook_text": "POV：月曜の朝、始発に乗る", "tags": ["train platform", "energy drink can", "umbrella"] },
+    { "id": "jp-003", "url": null, "platform": "instagram", "creator": "jp.street.facts", "followers": 520000, "views": 1200000, "likes": 64000, "posted_at": "2026-09-18", "caption": "日本の自販機、多すぎ問題", "hook_text": "なんで日本の自販機はこんなに多いの？", "tags": ["vending machine", "energy drink can", "bicycle"] },
+    { "id": "jp-004", "url": null, "platform": "instagram", "creator": "enadori.lab", "followers": 98000, "views": 980000, "likes": 51000, "posted_at": "2026-10-12", "caption": "エナドリ5本、正直レビュー #正直レビュー", "hook_text": "エナドリ5本飲み比べ、正直レビュー", "tags": ["energy drink can", "konbini", "office desk"] },
+    { "id": "jp-005", "url": null, "platform": "instagram", "creator": "asa.routine.yuki", "followers": 230000, "views": 870000, "likes": 72000, "posted_at": "2026-09-29", "caption": "仕事前の朝のルーティン #朝のルーティン", "hook_text": "仕事前のルーティン、全部見せます", "tags": ["office desk", "energy drink can", "train platform"] },
+    { "id": "jp-006", "url": null, "platform": "tiktok", "creator": "overtime.tanaka", "followers": 140000, "views": 760000, "likes": 69000, "posted_at": "2026-10-27", "caption": "残業前の一本 #いくぞ", "hook_text": "POV：残業が決まった瞬間", "tags": ["office desk", "energy drink can", "konbini"] },
+    { "id": "jp-007", "url": null, "platform": "instagram", "creator": "salaryman.daily", "followers": 330000, "views": 1400000, "likes": 88000, "posted_at": "2026-08-30", "caption": "朝5時起きサラリーマンの一日", "hook_text": "朝5時起きのサラリーマン、1日密着", "tags": ["train platform", "office desk", "energy drink can", "ramen counter"] },
+    { "id": "jp-008", "url": null, "platform": "tiktok", "creator": "overtime.tanaka", "followers": 140000, "views": 640000, "likes": 47000, "posted_at": "2026-10-02", "caption": "眠気ゼロ？検証してみた", "hook_text": "これ飲んだら、眠気ゼロ？", "tags": ["energy drink can", "office desk"] },
+    { "id": "jp-009", "url": null, "platform": "instagram", "creator": "konbini.tasting", "followers": 412000, "views": 590000, "likes": 44000, "posted_at": "2026-10-30", "caption": "期間限定フレーバー #期間限定", "hook_text": "期間限定フレーバー、もう飲んだ？", "tags": ["konbini", "energy drink can"] },
+    { "id": "jp-010", "url": null, "platform": "tiktok", "creator": "shibuya.commute", "followers": 268000, "views": 520000, "likes": 39000, "posted_at": "2026-09-22", "caption": "雨の日の通勤ルーティン", "hook_text": "POV：雨の日の通勤", "tags": ["umbrella", "train platform", "energy drink can"] },
+    { "id": "jp-011", "url": null, "platform": "instagram", "creator": "tokyo.lift.ken", "followers": 155000, "views": 410000, "likes": 31000, "posted_at": "2026-10-16", "caption": "ジム前の一本 #いくぞ", "hook_text": "仕事終わり、ジムの前に一本", "tags": ["gym", "energy drink can"] },
+    { "id": "jp-012", "url": null, "platform": "tiktok", "creator": "overtime.tanaka", "followers": 140000, "views": 380000, "likes": 29000, "posted_at": "2026-09-10", "caption": "ラーメンの後にエナドリ？", "hook_text": "ラーメンの後にエナドリって、アリ？", "tags": ["ramen counter", "energy drink can"] },
+    { "id": "jp-013", "url": null, "platform": "instagram", "creator": "jp.street.facts", "followers": 520000, "views": 350000, "likes": 18000, "posted_at": "2026-08-21", "caption": "自販機で一番売れてるのは？", "hook_text": "自販機で一番売れてるのは？", "tags": ["vending machine"] },
+    { "id": "jp-014", "url": null, "platform": "instagram", "creator": "konbini.tasting", "followers": 412000, "views": 330000, "likes": 21000, "posted_at": "2026-09-05", "caption": "店員さんが選ぶエナドリ", "hook_text": "コンビニ店員が選ぶ、本当においしいエナドリ", "tags": ["konbini", "energy drink can"] },
+    { "id": "jp-015", "url": null, "platform": "instagram", "creator": "asa.routine.yuki", "followers": 230000, "views": 300000, "likes": 24000, "posted_at": "2026-10-09", "caption": "自転車通勤の朝", "hook_text": "POV：自転車通勤の朝", "tags": ["bicycle", "energy drink can"] },
+    { "id": "jp-016", "url": null, "platform": "tiktok", "creator": "overtime.tanaka", "followers": 140000, "views": 280000, "likes": 22000, "posted_at": "2026-10-24", "caption": "仕事終わりのご褒美 #今日も一日がんばろう", "hook_text": "仕事終わりのご褒美は、これ一択。", "tags": ["konbini", "office desk", "energy drink can"] }
+  ]
+}

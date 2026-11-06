@@ -1,0 +1,27 @@
+{
+  "video": {
+    "id": "src-001",
+    "url": null,
+    "platform": "tiktok",
+    "creator": "jay.lifts",
+    "followers": 860000,
+    "views": 4100000,
+    "likes": 512000,
+    "posted_at": "2026-09-14",
+    "caption": "5AM hits different. Zero sugar, all go. #gymtok #energydrink",
+    "hook_text": "This is what 5AM energy actually looks like.",
+    "tags": ["energy drink can", "gym", "truck", "tailgate", "shaker bottle"]
+  },
+  "market": { "country": "US", "language": "en", "platform": "tiktok" },
+  "niche": "energy drink",
+  "hook": { "text": "This is what 5AM energy actually looks like.", "type": "claim" },
+  "format": "day_in_life",
+  "sound": "phonk",
+  "objects": ["energy drink can", "gym", "truck", "tailgate", "shaker bottle"],
+  "phrases": ["let's go", "no days off", "grind", "zero sugar"],
+  "claims": ["Zero sugar", "200 mg caffeine", "No crash"],
+  "cta": "Link in bio. Code JAY15 for 15% off.",
+  "tone": "High energy, hype, motivational",
+  "pacing_sec": 1.4,
+  "duration_sec": 28
+}

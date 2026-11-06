@@ -1,0 +1,67 @@
+{
+  "scripts": [
+    {
+      "id": "A",
+      "name": "Konbini question",
+      "angle": "Open with the question. Show the konbini ritual. Keep the gym after the hook.",
+      "hook_type": "question",
+      "hook": { "target": "毎朝コンビニでこれを買う理由、知ってる？", "gloss": "Do you know why I buy this at the konbini every morning?" },
+      "lines": [
+        { "t": 2, "target": "朝5時。まだ電車も空いてる。", "gloss": "5 AM. Even the trains are still empty.", "shot": "Train platform at dawn. Wide shot. Creator walks in." },
+        { "t": 6, "target": "コンビニで、いつものやつ。", "gloss": "The usual, from the konbini.", "shot": "Konbini fridge door opens. Hand takes the can." },
+        { "t": 10, "target": "ゼロシュガーで、カフェイン200mg。", "gloss": "Zero sugar, 200 mg caffeine.", "shot": "Close-up of the can label. Japanese on-screen text." },
+        { "t": 15, "target": "ジムの前に一本。いくぞ。", "gloss": "One can before the gym. Let's go.", "shot": "Gym entrance. Creator opens the can." },
+        { "t": 21, "target": "今日も一日がんばろう。", "gloss": "Let's do our best today too.", "shot": "Creator to camera. Smile. City pop rises." }
+      ],
+      "duration_sec": 24
+    },
+    {
+      "id": "B",
+      "name": "First-train POV",
+      "angle": "POV of the first train. The can is the morning switch.",
+      "hook_type": "pov",
+      "hook": { "target": "POV：始発で出勤する日の朝", "gloss": "POV: the morning you take the first train to work" },
+      "lines": [
+        { "t": 2, "target": "駅のホームで、まずこれ。", "gloss": "On the platform, this comes first.", "shot": "Train platform. POV hand holds the can." },
+        { "t": 6, "target": "自販機じゃなくて、コンビニ派。", "gloss": "Not the vending machine. I'm a konbini person.", "shot": "Walk past a vending machine. Cut to the konbini counter." },
+        { "t": 11, "target": "仕事前の5分で、スイッチが入る。", "gloss": "Five minutes before work, and the switch flips on.", "shot": "Office desk. Open the can. The laptop opens." },
+        { "t": 16, "target": "ゼロシュガーだから、罪悪感なし。", "gloss": "Zero sugar, so no guilt.", "shot": "Close-up of the label." },
+        { "t": 20, "target": "今日も一日がんばろう。", "gloss": "Let's do our best today too.", "shot": "Creator nods at the camera. Lo-fi beat." }
+      ],
+      "duration_sec": 23
+    },
+    {
+      "id": "C",
+      "name": "Honest review",
+      "angle": "A short honest review. It builds trust with a new audience.",
+      "hook_type": "review",
+      "hook": { "target": "コンビニ新作エナドリ、正直レビュー", "gloss": "New konbini energy drink: an honest review" },
+      "lines": [
+        { "t": 2, "target": "まず見た目。缶のデザイン、かなり好き。", "gloss": "First, the look. I really like the can design.", "shot": "Can on the konbini counter. Slow turn." },
+        { "t": 7, "target": "味は柑橘系で、甘すぎない。", "gloss": "Citrus flavor, not too sweet.", "shot": "First sip. Reaction close-up." },
+        { "t": 12, "target": "カフェイン200mg、ゼロシュガー。", "gloss": "200 mg caffeine, zero sugar.", "shot": "Label close-up. Japanese on-screen text." },
+        { "t": 16, "target": "トレーニング前に飲んでみた結果…", "gloss": "I drank it before training. The result...", "shot": "Gym. Quick cuts of one set." },
+        { "t": 21, "target": "正直、リピートあり。", "gloss": "Honestly, I'd buy it again.", "shot": "Creator to camera. Thumbs up." }
+      ],
+      "duration_sec": 25
+    }
+  ],
+  "creator_picks": [
+    { "handle": "tokyo.lift.ken", "why": "Gym plus salaryman life. Closest to your identity. He already posts 'one can before the gym'." },
+    { "handle": "salaryman.daily", "why": "Owns the 5 AM day-in-the-life format in Japan. Highest average views in the sample." },
+    { "handle": "konbini.tasting", "why": "Largest reach in konbini reviews. Best fit for Variant C." },
+    { "handle": "shibuya.commute", "why": "First-train POV specialist. Best fit for Variant B." },
+    { "handle": "enadori.lab", "why": "Energy drink comparisons. A trusted voice in this niche." }
+  ],
+  "posting": {
+    "platform": "instagram",
+    "local_time": "07:30",
+    "timezone": "Asia/Tokyo",
+    "days": ["Monday", "Wednesday", "Friday"],
+    "hashtags": ["#エナドリ", "#コンビニ新作", "#朝のルーティン", "#ゼロシュガー", "#エナジードリンク"],
+    "caption": {
+      "target": "毎朝のコンビニ、いつものやつ。今日も一日がんばろう。",
+      "gloss": "Every morning at the konbini, the usual. Let's do our best today too."
+    }
+  }
+}

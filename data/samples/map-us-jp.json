@@ -1,0 +1,68 @@
+{
+  "keep": [
+    { "layer": "identity", "element": "Your face, voice and high energy", "reason": "Japanese viewers follow people, not ads. Do not replace the creator." },
+    { "layer": "claim", "element": "Zero sugar · 200 mg caffeine", "reason": "Core product claim. Translate it. Do not change it." },
+    { "layer": "objects", "element": "energy drink can", "reason": "In 68% of top Japanese videos. Show the can in the first 2 seconds." },
+    { "layer": "format", "element": "day_in_life", "reason": "Day-in-the-life is the #2 format in Japan (23% of top videos)." },
+    { "layer": "objects", "element": "gym", "reason": "Only 4% of top Japanese videos show a gym. Keep it: it is your identity. Move it after the hook." }
+  ],
+  "change": [
+    {
+      "layer": "hook",
+      "from": "claim",
+      "to": "question",
+      "example": "毎朝コンビニでこれを買う理由、知ってる？",
+      "example_gloss": "Do you know why I buy this at the konbini every morning?",
+      "reason": "Question hooks lead in Japan (31% of top videos). Claim hooks are 8%.",
+      "evidence_ids": ["jp-001", "jp-003", "jp-008"]
+    },
+    {
+      "layer": "objects",
+      "from": "tailgate",
+      "to": "konbini",
+      "to_gloss": "convenience store",
+      "example": "Open on the konbini fridge. Take the can.",
+      "reason": "Konbini appears in 31% of top videos. Tailgates do not appear.",
+      "evidence_ids": ["jp-001", "jp-009", "jp-014"]
+    },
+    {
+      "layer": "objects",
+      "from": "truck",
+      "to": "train platform",
+      "example": "Replace the truck drive with the first train at 5 AM.",
+      "reason": "The commute is the Japanese morning. Train platforms are in 24% of top videos.",
+      "evidence_ids": ["jp-002", "jp-007", "jp-010"]
+    },
+    {
+      "layer": "phrases",
+      "from": "let's go",
+      "to": "いくぞ",
+      "to_gloss": "let's go",
+      "reason": "Same energy, native words. In 17% of top videos.",
+      "evidence_ids": ["jp-006", "jp-011"]
+    },
+    {
+      "layer": "phrases",
+      "from": "no days off",
+      "to": "今日も一日がんばろう",
+      "to_gloss": "let's do our best today too",
+      "reason": "The top closing line in Japan (21%). It is warm, not aggressive.",
+      "evidence_ids": ["jp-005", "jp-007", "jp-016"]
+    },
+    {
+      "layer": "phrases",
+      "from": "grind",
+      "to": "仕事前",
+      "to_gloss": "before work",
+      "reason": "Japanese videos frame energy around work, not the grind. In 11% of top videos.",
+      "evidence_ids": ["jp-005", "jp-006"]
+    },
+    {
+      "layer": "sound",
+      "from": "phonk",
+      "to": "city pop",
+      "reason": "City pop leads in Japan (27%). Phonk is 2%.",
+      "evidence_ids": ["jp-001", "jp-007", "jp-011"]
+    }
+  ]
+}
