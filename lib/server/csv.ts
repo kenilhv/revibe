@@ -45,6 +45,10 @@ export interface OrianeRow {
   transcript?: string;
   /** "Comments (Pro)", cut to 2,000 characters. */
   comments_text?: string;
+  /** Oriane API only: the exact words of the first 3 seconds (transcript chunks). */
+  opening_text?: string;
+  /** Oriane API only: text recognized on screen. */
+  on_screen_text?: string;
 }
 
 export interface ParsedCsv {
@@ -85,10 +89,14 @@ const COLUMNS = {
   coauthors: ["Account Co-authors", "Co-authors", "Coauthors"],
   transcript: ["Audio Transcript (Pro)", "Audio Transcript", "Transcript"],
   comments_text: ["Comments (Pro)", "Comments"],
+  // Not in the CSV export. The Oriane API adapter fills them.
+  opening_text: ["Opening Transcript"],
+  on_screen_text: ["On-screen Text", "On Screen Text"],
 } as const;
 
 type Column = keyof typeof COLUMNS;
 const COLUMN_NAMES = Object.keys(COLUMNS) as Column[];
+const API_ONLY_COLUMNS = new Set<Column>(["opening_text", "on_screen_text"]);
 
 export const NEEDED_COLUMNS_HINT =
   "In Oriane, export the search again with at least the Video URL and Nb Views columns.";
@@ -444,6 +452,8 @@ function buildRow(get: Getter, stats: ParseStats): OrianeRow | null {
     ["coauthors", "coauthors", 300],
     ["transcript", "transcript", 20000],
     ["comments_text", "comments_text", 2000],
+    ["opening_text", "opening_text", 300],
+    ["on_screen_text", "on_screen_text", 1000],
   ];
   for (const [field, column, max] of text) {
     const value = clip(clean(get(column)), max);
@@ -577,7 +587,9 @@ export function parseOrianeCsv(text: string): ParsedCsv {
     throw new UserError(`This file has no usable rows.${reasons ? ` ${reasons}` : ""} ${NEEDED_COLUMNS_HINT}`);
   }
 
-  const missing_columns = COLUMN_NAMES.filter((c) => columns[c] === undefined).map((c) => COLUMNS[c][0]);
+  const missing_columns = COLUMN_NAMES.filter((c) => columns[c] === undefined && !API_ONLY_COLUMNS.has(c)).map(
+    (c) => COLUMNS[c][0],
+  );
   return { rows, missing_columns, warnings };
 }
 

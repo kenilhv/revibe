@@ -31,6 +31,10 @@ export interface LabelVideoInput {
   caption?: string;
   audio_title?: string;
   transcript?: string;
+  /** The exact words of the first 3 seconds (Oriane API only). */
+  opening?: string;
+  /** Text recognized on screen (Oriane API only). */
+  on_screen_text?: string;
   comments?: string;
   duration_sec?: number;
 }
@@ -40,19 +44,20 @@ export function labelPrompt(args: { niche: string; country: string; language: st
   const system = [
     "You label short social videos for ReVibe. ReVibe compares video patterns between markets.",
     `The videos come from an Oriane search for the "${args.niche}" niche in ${countryName(args.country)}, spoken mostly in ${lang}.`,
-    "You get text only: caption, audio title, transcript and some comments. You cannot see the video.",
+    'You get text only: caption, audio title, transcript, some comments and, when known, "opening" (the words of the first 3 seconds) and "on_screen_text". You cannot see the video.',
     "",
     "For each video, return one item with these fields:",
     "- id: the id you were given. Copy it exactly.",
+    `- relevant: true when the video is about the "${args.niche}" niche (it shows, uses, reviews or talks about it). false when a search keyword matched by chance, for example a word with another meaning.`,
     `- hook_type: one of ${list(HOOK_TYPES)}. Pick the best fit for the opening line.`,
-    "- hook_text: the first 10 to 15 words of the transcript. Use the caption when there is no transcript. Keep the original language and script. Do not translate.",
+    '- hook_text: the first 10 to 15 words of the transcript, or of the caption when there is no transcript. When "opening" holds real words (not only a filler sound), start from it. Keep the original language and script. Do not translate.',
     `- format: one of ${list(FORMATS)}.`,
     '- objects: up to 6 things, settings or products that the text names or clearly implies. Lowercase English nouns, singular, for example "energy drink can", "convenience store", "office desk". Prefer generic nouns to brand names. No names of people.',
     "- phrases: up to 3 short phrases (2 to 6 words) in the video's own language and script that the creator or the viewers repeat, or that work as a catchphrase. Copy them from the text. No hashtags. Use [] when there is none.",
     `- sound_genre: prefer one of ${list(SOUND_GENRES)}. Get it from the audio title. Use "original audio" when the title is an original sound, for example "original sound - username" or "オリジナル楽曲". When no listed genre fits, write a short genre in lowercase English (1 to 3 words).`,
     "",
     "Use only the given lists for hook_type and format. Do not add facts that the text does not support.",
-    'Return only JSON in this shape: {"items":[{"id":"v1","hook_type":"question","hook_text":"...","format":"pov","objects":["..."],"phrases":["..."],"sound_genre":"..."}]}',
+    'Return only JSON in this shape: {"items":[{"id":"v1","relevant":true,"hook_type":"question","hook_text":"...","format":"pov","objects":["..."],"phrases":["..."],"sound_genre":"..."}]}',
   ].join("\n");
   const user = `Label these ${args.videos.length} videos. Return one item for each id.\n${JSON.stringify(args.videos)}`;
   return { system, user };
@@ -100,7 +105,7 @@ export function searchTermsPrompt(niche: string, language: string): Prompt {
     "You write search terms for Oriane, a search engine for TikTok and Instagram videos.",
     "Oriane matches words in transcripts, captions and hashtags. It does not translate.",
     `Write 3 to 6 short search terms in ${lang}, in native script, that local creators use for the niche. Include the common everyday or slang word.`,
-    "No hashtags signs. No explanations.",
+    "No # signs. No explanations.",
     'Return only JSON: {"terms":["..."]}',
   ].join("\n");
   return { system, user: JSON.stringify({ niche, language: lang }) };
@@ -115,10 +120,10 @@ export function sourcePrompt(args: { niche: string; market: Market; row: OrianeR
   const system = [
     "You analyze one short social video for ReVibe. ReVibe will adapt this video for another market.",
     `The video is in the "${args.niche}" niche. It performed well in ${countryName(args.market.country)}.`,
-    "You get its caption, audio title, transcript and duration from an Oriane export. You cannot see the video. Use only what the text says or clearly implies.",
+    'You get its caption, audio title, transcript and duration from Oriane, and sometimes "opening" (the words of the first 3 seconds) and "on_screen_text". You cannot see the video. Use only what the text says or clearly implies.',
     "",
     "Return one JSON object with these fields:",
-    `- hook: {"text": the first 10 to 15 words of the transcript (the caption when there is no transcript), in the original language and script, "type": one of ${list(HOOK_TYPES)}}`,
+    `- hook: {"text": the first 10 to 15 words of the transcript (the caption when there is no transcript), starting from "opening" when it holds real words, in the original language and script, "type": one of ${list(HOOK_TYPES)}}`,
     `- format: one of ${list(FORMATS)}`,
     `- sound: prefer one of ${list(SOUND_GENRES)}. Get it from the audio title. Use "original audio" when the title is an original sound.`,
     "- objects: up to 6 things, settings or products that the text names or clearly implies. Lowercase English nouns, singular. Prefer generic nouns to brand names.",
@@ -136,7 +141,9 @@ export function sourcePrompt(args: { niche: string; market: Market; row: OrianeR
   const fields: [string, string | undefined][] = [
     ["caption", clip(row.caption, 1500)],
     ["audio_title", clip(row.audio_title, 200)],
+    ["opening", clip(row.opening_text, 300)],
     ["transcript", clip(row.transcript, 4000)],
+    ["on_screen_text", clip(row.on_screen_text, 600)],
     ["comments", clip(row.comments_text, 600)],
   ];
   for (const [key, value] of fields) if (value) video[key] = value;
@@ -278,6 +285,7 @@ export function outputPrompt(source: SourceProfile, market: MarketProfile, map: 
     `- The hook plays at t = 0. Line times start at 2 or later and go up. duration_sec is the total length, from 15 to 45 seconds. Stay close to the source length (${Math.round(source.duration_sec) || 30} s).`,
     `- Write natural spoken ${lang} for short video: short lines, the way local creators talk. Not a word-for-word translation.`,
     "- Variant A applies the relevance map closely: every CHANGE item, and the hook example. Variants B and C can use other top patterns from the market.",
+    "- The three hooks are three different sentences, each written the way top creators in this market open. Do not translate the source hook word for word. When the market's top hook types differ, give each variant a different hook_type.",
     "- Every variant respects every KEEP item: the same creator, voice and energy, and the same product claim, translated.",
     "- Shot directions use the new objects and settings from the map.",
     "",

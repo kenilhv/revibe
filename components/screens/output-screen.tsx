@@ -8,6 +8,7 @@ import { plural } from "../map/labels";
 import { CompoundHandoff } from "../output/compound-handoff";
 import { CreatorCards } from "../output/creator-cards";
 import { PostingPlanCard } from "../output/posting-plan";
+import { PreviewClip } from "../output/preview-clip";
 import { ScriptVariants } from "../output/script-variants";
 import { SummaryStrip } from "../output/summary-strip";
 import { Button, ScreenHeader } from "../ui";
@@ -48,6 +49,8 @@ export function OutputScreen({ source, market, map, output, onSendToCompound, on
       </div>
 
       <ScriptVariants scripts={output.scripts} lang={lang} languageLabel={language} />
+
+      <PreviewClip output={output} market={market} sourceVideoId={source.video.id} lang={lang} />
 
       <CreatorCards creators={output.creators} marketName={marketName} />
 

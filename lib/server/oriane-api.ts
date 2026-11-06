@@ -7,25 +7,26 @@ import { UpstreamError, UserError } from "./http";
 // Oriane REST API adapter (private beta). ReVibe is CSV-first: the user exports a search per market and
 // uploads it. This adapter returns OrianeRow[], so the CSV pipeline stays the only pipeline.
 //
-// Source: the API docs at https://connect.oriane.xyz/rest/docs (OpenAPI 3.0, v0.0.1), read on 2026-11-06.
+// Sources: the API docs at https://connect.oriane.xyz/rest/docs (OpenAPI 3.0, v0.0.1) and docs/oriane-api.md
+// (live calls, 2026-11-06).
+//   Auth: "Authorization: Bearer <key>" (keys start with "beta_"). "x-api-key" returns 401.
 //   POST /rest/contents/search?sort=&offset=&limit=(1..100)&projection=basic|default|full
+//     Only projection "full" returns media[] with transcripts. Each call uses credits.
+//     Status 200: one page holds all results. 206: more pages exist. 402: no credits left.
 //   Body: { name?, operator: "and" | "or", filters?: {...}, queries?: [ same shape, nested 2 levels max ] }
 //   Text filters (transcript, caption, hashtags, audioTitle, ...): { includesFuzzy | includesExactly |
-//     excludesFuzzy | excludesExactly | exactMatch: { values: string[], operator }, operator }
-//   List filters (platform, platformId, transcriptLanguage, captionLanguage, ...): { includes, excludes, operator }
+//     excludesFuzzy | excludesExactly | exactMatch: { values: string[], operator } }
+//   List filters (platform, format, transcriptLanguage, ...): { includes, excludes, operator }.
+//     platformId takes { platform, platformId } objects.
 //   Ranges (viewsCount, profileFollowersCount, ...): { min, max }. publishedAt: { after, before }.
 //   Reply: { data: { results: Content[] }, metadata: { pagination: { offset, limit, totalCount } } }
-//   Engagement rates in the API are percentages (11.1). The CSV export uses decimals (0.111).
-//
-// TODO(oriane-api): confirm after the first call with a real key:
-//   1. The auth header. The docs do not show it. ReVibe sends "Authorization: Bearer <key>" and "x-api-key: <key>".
-//   2. A link field for each content. The example reply has none. TikTok links are built from the handle and
-//      the video id. Instagram links stay null unless the reply has a url-like field.
-//   3. Whether projection "default" already has transcripts. ReVibe asks for "full" to be safe.
+//   No link field: TikTok platformId is the video number; Instagram platformId is the shortcode
+//   (csv.ts builds both links). Engagement rates are percentages (11.1); the CSV uses decimals (0.111).
 
 const SEARCH_PATH = "/rest/contents/search";
 const PAGE_SIZE = 100;
 const TIMEOUT_MS = 60_000;
+const SCAN_SORT = "viewsRatePerFollowers:desc";
 
 export interface OrianeSearchParams {
   /** Words or phrases to find in transcripts, captions and hashtags. Use the market language. */
@@ -36,7 +37,7 @@ export interface OrianeSearchParams {
   /** Only videos published in the last N days. */
   days?: number;
   minViews?: number;
-  /** Rows to fetch in total, in pages of 100. Each page uses Oriane credits. */
+  /** Rows to fetch in total, in pages of 100. Each page is one call and uses Oriane credits. Default 100. */
   limit?: number;
 }
 
@@ -61,10 +62,10 @@ interface SearchPage {
 }
 
 /** One search page. 404 and 416 count as an empty page. */
-async function searchPage(body: unknown, offset: number, limit: number): Promise<SearchPage> {
+async function searchPage(body: unknown, offset: number, limit: number, sort?: string): Promise<SearchPage> {
   const { key, base } = assertOrianeApiReady();
   const url = new URL(`${base}${SEARCH_PATH}`);
-  url.searchParams.set("sort", "viewsCount:desc");
+  if (sort) url.searchParams.set("sort", sort);
   url.searchParams.set("offset", String(offset));
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("projection", "full");
@@ -80,7 +81,6 @@ async function searchPage(body: unknown, offset: number, limit: number): Promise
         "content-type": "application/json",
         accept: "application/json",
         authorization: `Bearer ${key}`,
-        "x-api-key": key,
       },
       body: JSON.stringify(body),
       signal: controller.signal,
@@ -139,6 +139,20 @@ function toCsvRecord(content: unknown): Record<string, unknown> | null {
     .filter((t): t is string => typeof t === "string" && t.trim() !== "")
     .join("\n");
   const duration = media.map((m) => m.duration).find((d) => typeof d === "number");
+  // The exact words of the first 3 seconds: the real hook.
+  const opening = media
+    .flatMap((m) => (Array.isArray(m.transcriptChunks) ? m.transcriptChunks.filter(isRecord) : []))
+    .filter((c) => typeof c.startSeconds === "number" && c.startSeconds < 3 && typeof c.text === "string")
+    .map((c) => String(c.text).trim())
+    .join(" ");
+  // Text recognized on screen. The CSV export does not have it.
+  const onScreen = [
+    ...new Set(
+      media.flatMap((m) =>
+        Array.isArray(m.onScreenText) ? m.onScreenText.filter((t): t is string => typeof t === "string" && t.trim() !== "") : [],
+      ),
+    ),
+  ].join(" | ");
   const comments = Array.isArray(content.popularComments)
     ? content.popularComments
         .filter(isRecord)
@@ -157,8 +171,8 @@ function toCsvRecord(content: unknown): Record<string, unknown> | null {
   return {
     Platform: content.platform,
     "Video Code": content.platformId,
-    // TODO(oriane-api): rename when the real link field is known.
-    "Video URL": firstString(content.url, content.permalink, content.contentUrl, content.link),
+    // The reply has no link field today. csv.ts builds the link from the platform id.
+    "Video URL": firstString(content.url, content.permalink),
     "Duration (seconds)": duration,
     "Publish Date": content.publishedAt,
     "Caption / Description": firstString(content.caption, content.title),
@@ -181,6 +195,8 @@ function toCsvRecord(content: unknown): Record<string, unknown> | null {
     "Account Co-authors": coAuthors || undefined,
     "Audio Transcript (Pro)": transcript || undefined,
     "Comments (Pro)": comments || undefined,
+    "Opening Transcript": opening || undefined,
+    "On-screen Text": onScreen || undefined,
   };
 }
 
@@ -191,8 +207,10 @@ function toRows(results: unknown[]): OrianeRow[] {
   return rows;
 }
 
-const textFilter = (values: string[]) => ({ includesFuzzy: { values, operator: "or" }, operator: "and" });
-const listFilter = (values: string[]) => ({ includes: values, operator: "or" });
+// Exact phrases. Measured today: fuzzy matching gave 56/100 on-topic results for "energy drink" (chicken
+// recipes, camera reviews); exact phrases gave 100/100 in English and Japanese.
+const textFilter = (values: string[]) => ({ includesExactly: { values, operator: "or" }, operator: "and" });
+const listFilter = <T>(values: T[]) => ({ includes: values, operator: "or" });
 
 /** The search body. Exported for tests. */
 export function buildSearchBody(params: OrianeSearchParams, now: Date = new Date()): Record<string, unknown> {
@@ -201,6 +219,8 @@ export function buildSearchBody(params: OrianeSearchParams, now: Date = new Date
   const hashtags = [...new Set(terms.map((t) => t.replace(/[\s#]+/g, "")).filter(Boolean))];
   const filters: Record<string, unknown> = {
     platform: listFilter(params.platforms && params.platforms.length > 0 ? params.platforms : ["tiktok", "instagram"]),
+    // Videos only: no photos or carousels.
+    format: listFilter(["video"]),
   };
   if (params.days) filters.publishedAt = { after: new Date(now.getTime() - params.days * 86_400_000).toISOString() };
   if (params.minViews) filters.viewsCount = { min: params.minViews };
@@ -224,11 +244,11 @@ export function buildSearchBody(params: OrianeSearchParams, now: Date = new Date
 export async function searchVideos(params: OrianeSearchParams): Promise<OrianeRow[]> {
   assertOrianeApiReady();
   const body = buildSearchBody(params);
-  const wanted = Math.max(1, Math.min(params.limit ?? 300, 2000));
+  const wanted = Math.max(1, Math.min(params.limit ?? PAGE_SIZE, 2000));
   const results: unknown[] = [];
   for (let offset = 0; offset < wanted; offset += PAGE_SIZE) {
     const size = Math.min(PAGE_SIZE, wanted - offset);
-    const page = await searchPage(body, offset, size);
+    const page = await searchPage(body, offset, size, SCAN_SORT);
     results.push(...page.results);
     if (page.results.length < size || (page.total !== null && offset + size >= page.total)) break;
   }
@@ -244,9 +264,23 @@ export function parseVideoUrl(url: string): { platform: "tiktok" | "instagram"; 
   return null;
 }
 
+const BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+/** Instagram shortcode -> numeric media id (base64url digits read as one number). */
+export function shortcodeToMediaId(code: string): string | null {
+  let id = BigInt(0);
+  const base = BigInt(64);
+  for (const ch of code) {
+    const digit = BASE64URL.indexOf(ch);
+    if (digit < 0) return null;
+    id = id * base + BigInt(digit);
+  }
+  return id.toString();
+}
+
 /**
  * One video by URL. The API has no lookup by URL, so ReVibe filters on the platform id from the URL.
- * TODO(oriane-api): Instagram URLs carry a shortcode; if platformId is numeric, Instagram lookups find nothing.
+ * Live replies show the Instagram shortcode as platformId; the numeric media id is sent too, in case.
  */
 export async function getVideo(url: string): Promise<OrianeRow[]> {
   assertOrianeApiReady();
@@ -254,10 +288,15 @@ export async function getVideo(url: string): Promise<OrianeRow[]> {
   if (!ref) {
     throw new UserError("ReVibe could not read that URL. Paste a full TikTok or Instagram video URL, or upload an Oriane CSV export.", 400);
   }
+  const ids = [ref.code];
+  if (ref.platform === "instagram") {
+    const numeric = shortcodeToMediaId(ref.code);
+    if (numeric) ids.push(numeric);
+  }
   const body = {
     name: "revibe-source",
     operator: "and",
-    filters: { platform: listFilter([ref.platform]), platformId: listFilter([ref.code]) },
+    filters: { platformId: listFilter(ids.map((platformId) => ({ platform: ref.platform, platformId }))) },
   };
   const page = await searchPage(body, 0, 5);
   // The user gave the link of this exact video, so keep it when the reply has none.

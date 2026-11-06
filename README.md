@@ -108,13 +108,14 @@ Server modules in `lib/server/`:
 - `market.ts`: the market scan. The model labels videos. Code counts every share.
 - `source.ts`, `relevance.ts`, `output.ts`: source profile, relevance map and output pack.
 - `samples.ts`: the example data in `data/samples/`.
-- `oriane-api.ts`: the seam for the Oriane API (private beta).
+- `oriane-api.ts`: the Oriane REST API adapter (private beta). It calls `POST /rest/contents/search` on `https://connect.oriane.xyz` and maps the results to the same rows as a CSV export.
 
 ## Limits
 
 - The score is a heuristic. It compares labels with the market's top patterns. It does not predict views.
 - Objects and settings come from captions, transcripts and comments that the model reads. The Oriane CSV export has no visual tags.
 - The model labels at most `SCAN_SAMPLE_SIZE` videos per market (default 120): the top videos of the last `SCAN_DAYS` days (default 90), ranked by views per follower.
-- The Oriane API is in private beta. `lib/server/oriane-api.ts` has TODO paths and field names. Use CSV exports until the API is confirmed.
+- The Oriane API is in private beta. ReVibe follows the API docs (connect.oriane.xyz/rest/docs) and `docs/oriane-api.md`. ReVibe sends the key as `Authorization: Bearer <key>`. The reply has no video link, so ReVibe builds it from the platform id. An API scan makes one call of 100 videos, sorted by views per follower. Each call uses Oriane credits. Use CSV exports or the cache for the demo.
+- Keyword searches catch videos that are off-topic. The model marks each video as relevant or not, and ReVibe leaves out the off-topic videos (unless fewer than 30% are on-topic).
 - The GMI Cloud base URL and the default model name come from third-party documents. Check them in your GMI Cloud console.
 - Compound has no public API. The hand-off shows the payload that ReVibe would send.

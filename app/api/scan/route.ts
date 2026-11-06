@@ -4,11 +4,13 @@ import { CACHE_VERSION, hashKey, readCached, writeCache } from "@/lib/server/cac
 import { loadDataset } from "@/lib/server/datasets";
 import { config } from "@/lib/server/env";
 import { handle, UserError, type Handled } from "@/lib/server/http";
-import { requireLLM } from "@/lib/server/llm";
+import { chatJSON, requireLLM } from "@/lib/server/llm";
 import { buildMarketProfileWithNotes, type MarketOptions } from "@/lib/server/market";
-import { searchVideos } from "@/lib/server/oriane-api";
+import { knownNicheTerms } from "@/lib/server/niche-terms";
+import { assertOrianeApiReady, searchVideos } from "@/lib/server/oriane-api";
+import { searchTermsPrompt } from "@/lib/server/prompts";
 import { sampleMarketFor } from "@/lib/server/samples";
-import { MarketProfileSchema, ScanRequestSchema } from "@/lib/server/schemas";
+import { MarketProfileSchema, ScanRequestSchema, SearchTermsSchema } from "@/lib/server/schemas";
 import type { MarketProfile } from "@/lib/types";
 
 // POST /api/scan: scan one market (example data, an uploaded Oriane CSV, or the Oriane API) into a MarketProfile.
@@ -38,6 +40,28 @@ function forCountry(profile: MarketProfile, country: string): MarketProfile {
 function joinNotes(notes: string[]): string | undefined {
   const text = notes.join(" ").trim();
   return text === "" ? undefined : text;
+}
+
+// The Oriane API matches words and does not translate: add search terms in the market language.
+// Known niches use the checked term list. Other niches ask the model for terms.
+async function searchTerms(niche: string, language: string, notes: string[]): Promise<string[]> {
+  const known = knownNicheTerms(niche, language);
+  if (known) return known;
+  if (language.toLowerCase().startsWith("en")) return [niche];
+  try {
+    const { terms } = await chatJSON({
+      ...searchTermsPrompt(niche, language),
+      schema: SearchTermsSchema,
+      maxTokens: 300,
+      temperature: 0,
+      label: "search terms",
+    });
+    return [...new Set([...terms, niche])];
+  } catch (err) {
+    if (err instanceof UserError) throw err;
+    notes.push("ReVibe could not translate the niche, so the Oriane search uses the niche as typed.");
+    return [niche];
+  }
 }
 
 async function fromCache(key: string, country: string): Promise<Handled<MarketProfile> | null> {
@@ -100,19 +124,26 @@ export const POST = handle(ScanRequestSchema, async (req): Promise<Handled<Marke
   const hit = await fromCache(key, req.country);
   if (hit) return hit;
 
+  // Check both services before any paid call.
+  assertOrianeApiReady();
   requireLLM("analyze videos from the Oriane API");
+  const searchNotes: string[] = [];
+  const terms = await searchTerms(opts.niche, req.language, searchNotes);
+  // Two pages of 100 (each page uses Oriane credits). Exact-phrase search still returns videos that only
+  // mention the niche, so the labeler drops off-topic ones; a wider pool leaves enough relevant videos.
   const rows = await searchVideos({
-    query: opts.niche,
+    terms,
     language: req.language,
-    platforms: req.platform === "recommend" ? SCAN_PLATFORMS : [req.platform],
+    platforms: req.platform === "recommend" || req.platform === "youtube" ? SCAN_PLATFORMS : [req.platform],
     days: opts.days,
-    limit: 1000,
+    minViews: 10_000,
+    limit: Math.max(opts.sampleSize, 200),
   });
   if (rows.length === 0) {
     throw new UserError("The Oriane API found no videos for this search. Try a broader niche, or upload an Oriane CSV export.", 404);
   }
   const { profile, notes } = await buildMarketProfileWithNotes(rows, opts);
-  notes.push("Data from the Oriane API (beta).");
+  notes.push(...searchNotes, `Data from the Oriane API (beta). Search terms: ${terms.join(", ")}.`);
   await writeCache(NAMESPACE, key, { profile, notes });
   return { data: profile, source: "live", cache_key: key, note: joinNotes(notes) };
 });

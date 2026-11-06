@@ -114,6 +114,12 @@ interface Reply {
   truncated: boolean;
 }
 
+// Reasoning models spend the whole output budget on hidden thinking and return empty content at the token
+// limit (seen with DeepSeek-V4-Flash: finish "length", content ""). Ask for no reasoning, in the two forms
+// providers accept. A provider that rejects the fields gets one retry without them.
+const NO_REASONING = { reasoning: { effort: "none" }, thinking: { type: "disabled" } } as const;
+let reasoningFlagsSupported = true;
+
 async function complete(messages: Message[], opts: ChatJSONOptions<unknown>): Promise<Reply> {
   const url = `${config.gmiApiBase}/chat/completions`;
   const key = config.gmiApiKey ?? "";
@@ -124,11 +130,17 @@ async function complete(messages: Message[], opts: ChatJSONOptions<unknown>): Pr
     max_tokens: opts.maxTokens ?? 4000,
   };
   let useJsonMode = jsonModeSupported;
+  let useReasoningFlags = reasoningFlagsSupported;
   let retriedJsonMode = false;
+  let retriedReasoningFlags = false;
   let retriedTransient = false;
 
   for (;;) {
-    const payload = useJsonMode ? { ...base, response_format: { type: "json_object" } } : base;
+    const payload = {
+      ...base,
+      ...(useReasoningFlags ? NO_REASONING : {}),
+      ...(useJsonMode ? { response_format: { type: "json_object" } } : {}),
+    };
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     const started = Date.now();
@@ -179,6 +191,13 @@ async function complete(messages: Message[], opts: ChatJSONOptions<unknown>): Pr
       return { content, truncated: choice?.finish_reason === "length" };
     }
 
+    if (res.status === 400 && useReasoningFlags && !retriedReasoningFlags && /reasoning|thinking/i.test(text)) {
+      console.warn(`[llm] ${opts.label}: the provider rejects the no-reasoning fields. ReVibe retries without them.`);
+      reasoningFlagsSupported = false;
+      useReasoningFlags = false;
+      retriedReasoningFlags = true;
+      continue;
+    }
     if (res.status === 400 && useJsonMode && !retriedJsonMode && /response_format|json_object|json mode|json_schema/i.test(text)) {
       // The provider or model does not support JSON mode. Retry once without it and remember.
       console.warn(`[llm] ${opts.label}: JSON mode not supported. ReVibe retries without response_format.`);

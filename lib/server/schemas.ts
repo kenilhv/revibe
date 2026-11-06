@@ -239,6 +239,11 @@ const formatStrict = z
 
 const labelItem = z.object({
   id: z.union([z.string(), z.number()]).transform((v) => String(v).trim()),
+  // Keyword searches catch off-topic videos. Missing means relevant.
+  relevant: z
+    .unknown()
+    .optional()
+    .transform((v) => !(v === false || v === 0 || (typeof v === "string" && /^(false|no|0)$/i.test(v.trim())))),
   hook_type: z.unknown().optional().transform(toHookType),
   hook_text: text(200),
   format: z.unknown().optional().transform(toFormat),

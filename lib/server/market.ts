@@ -35,6 +35,9 @@ const BATCH_SIZE = 40;
 const MIN_PLATFORM_ROWS = 20;
 const MAX_PATTERNS = 12;
 const MIN_FOLLOWERS = 5000;
+// Keyword searches return many videos that only mention the niche. Above this count, only the videos
+// that are about the niche count. Below it, the sample is too small, so every video counts, with a note.
+const MIN_RELEVANT = 15;
 const DAY_MS = 86_400_000;
 
 const FORMAT_LABEL: Record<Format, string> = {
@@ -169,6 +172,10 @@ function labelInput(row: OrianeRow, id: string): LabelVideoInput {
   if (audio) input.audio_title = audio;
   const transcript = clip(row.transcript, 500);
   if (transcript) input.transcript = transcript;
+  const opening = clip(row.opening_text, 200);
+  if (opening) input.opening = opening;
+  const onScreen = clip(row.on_screen_text, 200);
+  if (onScreen) input.on_screen_text = onScreen;
   const comments = clip(row.comments_text, 200);
   if (comments) input.comments = comments;
   if (row.duration_sec) input.duration_sec = row.duration_sec;
@@ -416,8 +423,20 @@ export async function buildMarketProfileWithNotes(rows: OrianeRow[], opts: Marke
   const sample = pool.slice(0, opts.sampleSize);
 
   const labels = await labelRows(sample, opts, notes);
-  const labeledRows = sample.filter((row) => labels.has(row.id));
+  let labeledRows = sample.filter((row) => labels.has(row.id));
   if (labeledRows.length === 0) throw new UpstreamError("The model returned no usable labels for this market. Try again.");
+
+  // Keyword searches catch off-topic videos. Leave them out, unless that would leave too few videos.
+  const relevantRows = labeledRows.filter((row) => labels.get(row.id)?.relevant !== false);
+  const offTopic = labeledRows.length - relevantRows.length;
+  if (offTopic > 0) {
+    if (relevantRows.length >= MIN_RELEVANT) {
+      labeledRows = relevantRows;
+      notes.push(`ReVibe left out ${offTopic} ${offTopic === 1 ? "video" : "videos"} that are not about ${opts.niche} (a search keyword matched by chance).`);
+    } else {
+      notes.push(`Only ${relevantRows.length} of ${labeledRows.length} videos are about ${opts.niche}, so ReVibe kept them all. Check the Oriane search.`);
+    }
+  }
 
   const index = await canonicalize(
     labeledRows.map((row) => labels.get(row.id) as VideoLabel),

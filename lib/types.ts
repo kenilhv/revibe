@@ -349,6 +349,35 @@ export interface CompoundResponse {
   payload: CompoundPayload;
 }
 
+// Preview clip: a short AI render of one script variant, made with Wan 3.0 on GMI Cloud.
+
+export interface RenderRequest {
+  variant: VariantId;
+  output: OutputPack;
+  market: Market;
+  /** SourceProfile.video.id. The example video gets a cached clip. */
+  source_video_id: string;
+}
+
+export type RenderStatus = "queued" | "processing" | "done" | "failed";
+
+export interface RenderJob {
+  /** GMI request id, or "cache:<variant>" for a bundled clip. */
+  id: string;
+  variant: VariantId;
+  status: RenderStatus;
+  model: string;
+  prompt: string;
+  video_url: string | null;
+  seconds: number;
+  resolution: string;
+  ratio: string;
+  /** List price for this clip, in US dollars. */
+  cost_usd: number;
+  /** Set when the status is "failed". */
+  message?: string;
+}
+
 /** GET /api/health. Never contains secrets. */
 export interface HealthStatus {
   /** GMI Cloud key is set. */

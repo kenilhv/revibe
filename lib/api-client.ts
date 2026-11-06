@@ -11,10 +11,13 @@ import type {
   OutputPack,
   OutputRequest,
   RelevanceMap,
+  RenderJob,
+  RenderRequest,
   ScanRequest,
   SourceProfile,
   SourceRequest,
   UploadRequest,
+  VariantId,
 } from "./types";
 
 async function post<T>(path: string, body: unknown): Promise<ApiResult<T>> {
@@ -51,4 +54,7 @@ export const api = {
   map: (req: MapRequest) => post<RelevanceMap>("/api/map", req),
   output: (req: OutputRequest) => post<OutputPack>("/api/output", req),
   compound: (req: CompoundRequest) => post<CompoundResponse>("/api/compound", req),
+  render: (req: RenderRequest) => post<RenderJob>("/api/render", req),
+  renderStatus: (id: string, variant: VariantId) =>
+    get<RenderJob>(`/api/render?id=${encodeURIComponent(id)}&variant=${encodeURIComponent(variant)}`),
 };
