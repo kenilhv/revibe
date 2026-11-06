@@ -144,7 +144,10 @@ export function useRun(): { run: RunView; actions: RunActions } {
     }
     if (s === "plan") {
       if (!d.source || !d.target) throw new Error("The video and the market scan are missing.");
-      const m = unwrap<RelevanceMap>(await api.map({ source: d.source, market: d.target }), "Could not build the plan");
+      const raw = unwrap<RelevanceMap>(await api.map({ source: d.source, market: d.target }), "Could not build the plan");
+      // KEEP wins: a change that replaces an element the plan keeps is dropped.
+      const kept = new Set(raw.data.keep.map((k) => `${k.layer}:${k.element.trim().toLowerCase()}`));
+      const m = { ...raw, data: { ...raw.data, change: raw.data.change.filter((c) => !kept.has(`${c.layer}:${c.from.trim().toLowerCase()}`)) } };
       const o = unwrap<OutputPack>(await api.output({ source: d.source, market: d.target, map: m.data }), "Could not write the scripts");
       return { ...d, map: m.data, output: o.data, metas: { ...d.metas, map: m.meta, output: o.meta } };
     }
