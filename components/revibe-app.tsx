@@ -14,7 +14,7 @@ import { PlanScreen } from "./screens/plan-screen";
 import { useRun } from "./flow/use-run";
 import { STAGE_ORDER, STAGES, type RunView, type Stage } from "./flow/types";
 import { CheckIcon } from "./input/icons";
-import { Chip, cx } from "./ui";
+import { Button, Chip, cx } from "./ui";
 
 const SCREENS = {
   brief: BriefScreen,
@@ -72,6 +72,12 @@ export function ReVibeApp() {
           {onBrief && <p className="max-w-2xl text-sm text-muted sm:text-[0.95rem]">{TAGLINE}</p>}
           <Pipeline run={run} onGo={actions.goTo} className={onBrief ? "mt-0.5" : "mt-1"} />
           <div className="absolute top-0 right-0 hidden items-center gap-2 sm:flex">
+            {onBrief && (
+              <Button size="sm" variant="keep" onClick={actions.runDemo} disabled={run.busy}>
+                Run the demo
+              </Button>
+            )}
+            {run.autoplay && run.stage !== "final" && <Chip tone="gold">Demo running</Chip>}
             {route && <span className="tabular rounded-md border border-line px-2 py-0.5 font-mono text-xs text-muted">{route}</span>}
             {live && (
               <Chip tone="keep">

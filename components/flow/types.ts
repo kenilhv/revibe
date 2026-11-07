@@ -80,10 +80,14 @@ export interface RunView {
   /** The stage the run has reached. Earlier stages can be opened again. */
   reached: Stage;
   busy: boolean;
+  /** True while the demo moves through the stages on its own. */
+  autoplay: boolean;
 }
 
 export interface RunActions {
   start: (brief: Brief) => void;
+  /** Run the prepared demo: fill the brief, start, and move through the stages on its own. */
+  runDemo: () => void;
   /** Go to the next stage and run it. */
   next: () => void;
   back: () => void;

@@ -22,6 +22,18 @@ export const DEFAULT_BRIEF: Brief = {
   targetDatasetId: null,
 };
 
+/** The prepared demo run. Every call it makes is cached, so it also works offline. */
+export const DEMO_BRIEF: Brief = {
+  ...DEFAULT_BRIEF,
+  videoUrl: "https://www.tiktok.com/@jennnbellee/video/7676581842794958110",
+  docs: "Launch the Red Bull can in Japan in December. Keep: the product, the creator's face and energy. Audience: 20 to 30, commuters and gym-goers. Must not look like an ad.",
+  niche: "energy drink",
+  mode: "api",
+};
+
+/** How long each result stays on screen before the demo moves on, in milliseconds. */
+const DEMO_DWELL_MS: Partial<Record<Stage, number>> = { analyze: 14000, market: 16000, plan: 22000 };
+
 const IDLE: StageState = { phase: "idle", steps: [], durationMs: 0 };
 
 function freshStates(): Record<Stage, StageState> {
@@ -77,6 +89,7 @@ export function useRun(): { run: RunView; actions: RunActions } {
   const [data, setData] = useState<RunData>({ metas: {} });
   const [states, setStates] = useState<Record<Stage, StageState>>(freshStates);
   const [busy, setBusy] = useState(false);
+  const [autoplay, setAutoplay] = useState(false);
 
   const briefRef = useRef(brief);
   const dataRef = useRef(data);
@@ -148,7 +161,9 @@ export function useRun(): { run: RunView; actions: RunActions } {
       // KEEP wins: a change that replaces an element the plan keeps is dropped.
       const kept = new Set(raw.data.keep.map((k) => `${k.layer}:${k.element.trim().toLowerCase()}`));
       const m = { ...raw, data: { ...raw.data, change: raw.data.change.filter((c) => !kept.has(`${c.layer}:${c.from.trim().toLowerCase()}`)) } };
-      const o = unwrap<OutputPack>(await api.output({ source: d.source, market: d.target, map: m.data }), "Could not write the scripts");
+      // The scripts come from the map as the server made it, so a prepared run replays its cached scripts
+      // and renders; the filtered map is only what the screen shows.
+      const o = unwrap<OutputPack>(await api.output({ source: d.source, market: d.target, map: raw.data }), "Could not write the scripts");
       // Render the variant that keeps the hook type the plan keeps; otherwise A.
       const keptHook = m.data.keep.find((k) => k.layer === "hook")?.element;
       const renderVariant = o.data.scripts.find((s) => s.hook_type === keptHook)?.id ?? o.data.scripts[0]?.id ?? "A";
@@ -204,6 +219,7 @@ export function useRun(): { run: RunView; actions: RunActions } {
   const goTo = useCallback(
     (s: Stage) => {
       if (STAGE_ORDER.indexOf(s) > STAGE_ORDER.indexOf(reached)) return;
+      setAutoplay(false);
       setStage(s);
     },
     [reached],
@@ -237,8 +253,22 @@ export function useRun(): { run: RunView; actions: RunActions } {
 
   const back = useCallback(() => {
     const i = STAGE_ORDER.indexOf(stage);
+    setAutoplay(false);
     if (i > 0) setStage(STAGE_ORDER[i - 1]);
   }, [stage]);
+
+  const runDemo = useCallback(() => {
+    setAutoplay(true);
+    start(DEMO_BRIEF);
+  }, [start]);
+
+  // The demo moves on by itself: when a stage shows its result, the next stage starts after a pause.
+  useEffect(() => {
+    if (!autoplay || stage === "final" || stage === "brief") return;
+    if (states[stage].phase !== "result") return;
+    const timer = setTimeout(next, DEMO_DWELL_MS[stage] ?? 15000);
+    return () => clearTimeout(timer);
+  }, [autoplay, stage, states, next]);
 
   const retry = useCallback(() => {
     void runStage(stage);
@@ -247,6 +277,7 @@ export function useRun(): { run: RunView; actions: RunActions } {
   const restart = useCallback(() => {
     runId.current++;
     if (theater.current) clearTimeout(theater.current.timer);
+    setAutoplay(false);
     setBusy(false);
     setStage("brief");
     setReached("brief");
@@ -256,7 +287,13 @@ export function useRun(): { run: RunView; actions: RunActions } {
     setStates(freshStates());
   }, []);
 
-  const run = useMemo<RunView>(() => ({ stage, brief, data, states, reached, busy }), [stage, brief, data, states, reached, busy]);
-  const actions = useMemo<RunActions>(() => ({ start, next, back, goTo, skipTheater, retry, restart }), [start, next, back, goTo, skipTheater, retry, restart]);
+  const run = useMemo<RunView>(
+    () => ({ stage, brief, data, states, reached, busy, autoplay }),
+    [stage, brief, data, states, reached, busy, autoplay],
+  );
+  const actions = useMemo<RunActions>(
+    () => ({ start, runDemo, next, back, goTo, skipTheater, retry, restart }),
+    [start, runDemo, next, back, goTo, skipTheater, retry, restart],
+  );
   return { run, actions };
 }

@@ -83,6 +83,8 @@ export const RenderRequestSchema = z.object({
   market: z.looseObject({ country: z.string().min(2).max(2), language: z.string().min(2).max(8), platform: z.string() }),
   source_video_id: z.string().min(1).max(200),
   keep: z.array(z.string().max(120)).max(12).optional(),
+  /** A prompt written elsewhere (the localized FreeVideo prompt) replaces the one built from the script. */
+  prompt: z.string().trim().min(20).max(4000).optional(),
 });
 
 /** The validated request body. Only the fields the prompt needs. */
@@ -256,7 +258,7 @@ function isExampleScript(req: RenderInput): boolean {
 
 /** Start a clip, or return the cached clip for the example script. */
 export async function startClip(req: RenderInput): Promise<{ job: RenderJob; cached: boolean }> {
-  const prompt = buildClipPrompt(req);
+  const prompt = req.prompt ?? buildClipPrompt(req);
   const seconds = secondsFor(req);
   // A live market scan writes different scripts for the example video. Those get a live render.
   if (isExampleScript(req)) {
