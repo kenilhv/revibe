@@ -1,47 +1,38 @@
 "use client";
 
-// What ReVibe read from the video: the hook, the facts, the elements by layer, and the brief it will honor.
+// What ReVibe read from the video, compact: the hook, six facts, the elements, and the brief it will honor.
 
 import type { ReactNode } from "react";
 import { seconds } from "@/lib/format";
 import type { Layer, SourceProfile } from "@/lib/types";
 import { TagList } from "../scan/bits";
 import { display } from "../scan/match";
-import { Card, Chip, Eyebrow, LAYER_DOT, LayerChip, cx } from "../ui";
+import { Chip, Eyebrow, LAYER_DOT, LayerChip, cx } from "../ui";
 
-const LABEL = "font-mono text-[0.7rem] font-medium uppercase tracking-[0.12em] text-muted";
+const LABEL = "font-mono text-[0.68rem] font-medium uppercase tracking-[0.12em] text-muted";
 
-/** The first 3 seconds as the hero line. */
+/** The first 3 seconds as the hero line, with the hook type. */
 export function HookHero({ source }: { source: SourceProfile }) {
   const lang = source.market.language;
-  const caption = source.video.caption?.trim();
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <Eyebrow>First 3 seconds</Eyebrow>
         <LayerChip layer="hook" />
-        <Chip>{display(source.hook.type)} hook</Chip>
+        <Chip tone="accent">{display(source.hook.type)} hook</Chip>
       </div>
-      <p lang={lang} className="font-display text-2xl leading-tight font-semibold tracking-tight wrap-break-word sm:text-3xl lg:text-4xl">
+      <p lang={lang} className="font-display text-xl leading-tight font-semibold tracking-tight wrap-break-word sm:text-2xl lg:text-[1.75rem]">
         “{source.hook.text}”
       </p>
-      {caption && (
-        <p className="text-sm leading-relaxed text-muted">
-          <span className="font-medium text-ink">Caption</span>{" "}
-          <span lang={lang} className="wrap-break-word">
-            {caption}
-          </span>
-        </p>
-      )}
     </div>
   );
 }
 
-/** Format, sound, duration, pacing, tone and CTA, two columns. */
+/** Format, sound, duration, pacing, tone and CTA: three columns, two rows. */
 export function FactGrid({ source }: { source: SourceProfile }) {
   const pacing = Number.isFinite(source.pacing_sec) && source.pacing_sec > 0 ? `${source.pacing_sec} s per cut` : "Not measured";
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-5 border-y border-line py-5">
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-y border-line py-3 sm:grid-cols-3">
       <Fact label="Format" layer="format">
         {display(source.format)}
       </Fact>
@@ -62,69 +53,54 @@ export function FactGrid({ source }: { source: SourceProfile }) {
 
 function Fact({ label, layer, mono, children }: { label: string; layer?: Layer; mono?: boolean; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-0.5">
       <dt className={cx(LABEL, "flex items-center gap-1.5")}>
         {layer && <span aria-hidden="true" className={cx("size-1.5 rounded-full", LAYER_DOT[layer])} />}
         {label}
       </dt>
-      <dd className={cx("min-w-0 text-sm font-medium wrap-break-word", mono && "tabular font-mono")}>{children}</dd>
+      <dd className={cx("min-w-0 text-sm font-medium wrap-break-word line-clamp-2", mono && "tabular font-mono")}>{children}</dd>
     </div>
   );
 }
 
-/** Objects, phrases and claims as chip rows. Claims are KEEP items, so they read in teal. */
+const MAX_OBJECTS = 8;
+const MAX_PHRASES = 6;
+
+/** Objects and phrases as chip rows, label on the left. */
 export function ElementRows({ source }: { source: SourceProfile }) {
   const lang = source.market.language;
   return (
-    <div className="flex flex-col gap-5">
-      <Row label="Objects and settings" layer="objects">
-        <TagList items={source.objects} empty="No objects found" />
-      </Row>
-      <Row label="Phrases" layer="phrases">
-        <TagList items={source.phrases} lang={lang} empty="No repeated phrases found" />
-      </Row>
-      <Row label="Claims" keep>
-        {source.claims.length === 0 ? (
-          <p className="text-sm text-faint">No product claims found in the video.</p>
-        ) : (
-          <ul className="flex flex-wrap gap-1.5">
-            {source.claims.map((claim, i) => (
-              <li key={`${i}-${claim}`}>
-                <Chip tone="keep" className="max-w-full whitespace-normal wrap-anywhere">
-                  {claim}
-                </Chip>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Row>
+    <div className="flex flex-col gap-2">
+      <Row label="Objects" layer="objects" items={source.objects} max={MAX_OBJECTS} empty="No objects found" />
+      <Row label="Phrases" layer="phrases" items={source.phrases} max={MAX_PHRASES} lang={lang} empty="No repeated phrases found" />
     </div>
   );
 }
 
-function Row({ label, layer, keep, children }: { label: string; layer?: Layer; keep?: boolean; children: ReactNode }) {
+function Row({ label, layer, items, max, lang, empty }: { label: string; layer: Layer; items: string[]; max: number; lang?: string; empty: string }) {
+  const extra = Math.max(0, items.length - max);
   return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <div className={cx(LABEL, "flex items-center gap-1.5")}>
-        <span aria-hidden="true" className={cx("size-1.5 rounded-full", layer ? LAYER_DOT[layer] : "bg-keep")} />
+    <div className="grid min-w-0 grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-2">
+      <div className={cx(LABEL, "flex items-center gap-1.5 pt-1")}>
+        <span aria-hidden="true" className={cx("size-1.5 rounded-full", LAYER_DOT[layer])} />
         {label}
-        {keep && <span className="ml-1 rounded-sm bg-keep-soft px-1.5 py-px text-[0.62rem] text-keep">Keep</span>}
       </div>
-      {children}
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+        <TagList items={items.slice(0, max)} lang={lang} empty={empty} />
+        {extra > 0 && <span className="tabular text-xs text-faint">+{extra} more</span>}
+      </div>
     </div>
   );
 }
 
-/** The campaign brief the creator typed, with the claims ReVibe will protect. */
-export function BriefCard({ docs, claims }: { docs: string; claims: string[] }) {
-  const kept = claims.length > 0 ? claims.join(", ") : "the claims in your brief.";
+/** The campaign brief the creator typed, as one line, with the claims ReVibe will protect. */
+export function BriefLine({ docs, claims }: { docs: string; claims: string[] }) {
+  const text = docs.replace(/\s+/g, " ").trim();
   return (
-    <Card className="flex flex-col gap-3 border-l-[3px] border-l-keep p-4 sm:p-5">
-      <Eyebrow>Your brief</Eyebrow>
-      <p className="max-h-40 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">{docs}</p>
-      <p className="text-sm leading-relaxed">
-        <span className="font-medium text-keep">ReVibe will keep:</span> {kept}
-      </p>
-    </Card>
+    <p className="flex min-w-0 items-baseline gap-2 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm" title={text}>
+      <span className="shrink-0 font-medium text-keep">Your brief</span>
+      <span className="min-w-0 truncate text-muted">{text}</span>
+      {claims.length > 0 && <span className="shrink-0 text-xs text-keep">Keeps: {claims.slice(0, 2).join(", ")}</span>}
+    </p>
   );
 }

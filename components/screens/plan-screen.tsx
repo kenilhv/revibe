@@ -1,24 +1,31 @@
 "use client";
 
-// Stage 4 · Plan. Keep what is you, change what is context: the score, the suggestions with their evidence, the
-// relevance map as a frame match, the score by layer, and the KEEP list.
+// Stage 4 · Plan. Keep what is you, change what is context. One viewport: the score in the top row, the frame match
+// with the KEEP row at left, the compact list of changes at right, the score by layer behind a toggle.
 
-import { countryName, languageName, PLATFORM_NAMES } from "@/lib/markets";
-import type { ApiMeta, Layer, MarketProfile, OutputPack, RelevanceMap, SourceProfile } from "@/lib/types";
+import { countryName, languageName } from "@/lib/markets";
+import type { Layer, MarketProfile, OutputPack, RelevanceMap, SourceProfile, VariantId } from "@/lib/types";
 import { StageRunner } from "../flow/stage-runner";
 import type { ScreenProps } from "../flow/types";
-import { KeepColumn } from "../map/keep-column";
-import { phraseLang, plural } from "../map/labels";
+import { phraseLang } from "../map/labels";
 import { ScorePanel } from "../map/score-panel";
 import { FrameMatch } from "../plan/frame-match";
+import { KeepRow } from "../plan/keep-row";
+import { Popover } from "../plan/popover";
 import { ScoreHeader } from "../plan/score-header";
 import { StageFooter } from "../plan/stage-footer";
 import { Suggestions } from "../plan/suggestions";
-import { KEEP_ID, orderChanges } from "../plan/wording";
-import { ErrorNote, ScreenHeader, SourceBadge } from "../ui";
+import { orderChanges } from "../plan/wording";
+import { ErrorNote, Eyebrow } from "../ui";
 
 const EYEBROW = "Stage 4 · Plan";
 const TITLE = "Keep what is you. Change what is context.";
+
+/** Poster of a bundled clip: the same path with .jpg. Remote clips have no poster. */
+function posterOf(url: string | null | undefined): string | null {
+  if (!url || !url.startsWith("/clips/")) return null;
+  return url.replace(/\.mp4$/i, ".jpg");
+}
 
 export function PlanScreen({ run, actions }: ScreenProps) {
   const { source, target, map, output } = run.data;
@@ -41,7 +48,8 @@ export function PlanScreen({ run, actions }: ScreenProps) {
           market={target}
           map={map}
           output={output}
-          meta={run.data.metas.map}
+          variant={run.data.renderVariant ?? "A"}
+          poster={posterOf(run.data.hookClip?.video_url ?? run.data.fullClip?.video_url)}
           busy={run.busy}
           onBack={actions.back}
           onNext={actions.next}
@@ -58,7 +66,8 @@ function PlanResult({
   market,
   map,
   output,
-  meta,
+  variant,
+  poster,
   busy,
   onBack,
   onNext,
@@ -67,7 +76,9 @@ function PlanResult({
   market: MarketProfile;
   map: RelevanceMap;
   output: OutputPack;
-  meta?: ApiMeta;
+  /** The script that gets rendered. */
+  variant: VariantId;
+  poster: string | null;
   busy: boolean;
   onBack: () => void;
   onNext: () => void;
@@ -75,9 +86,7 @@ function PlanResult({
   const marketName = countryName(market.market.country);
   const sourceLang = source.market.language;
   const targetLang = market.market.language;
-  const language = languageName(targetLang);
   const changes = orderChanges(map.change);
-  const scripts = output.scripts.length;
 
   const hookRow = map.breakdown.find((b) => b.layer === "hook");
   const hookGain = hookRow ? hookRow.weight * (hookRow.after - hookRow.before) : 0;
@@ -86,39 +95,48 @@ function PlanResult({
   const langFor = (layer: Layer, element: string) =>
     layer === "phrases" ? phraseLang(element, source.phrases, sourceLang, targetLang) : undefined;
 
-  const where = `${marketName} on ${PLATFORM_NAMES[market.market.platform]}`;
-  const keeps = map.keep.length;
-  const lede = [
-    changes.length === 0
-      ? `The video already fits ${where}.`
-      : `${plural(changes.length, "change")} ${changes.length === 1 ? "fits" : "fit"} this video to ${where}.`,
-    keeps === 0 ? "" : `${plural(keeps, "thing")} ${keeps === 1 ? "stays, because it makes" : "stay, because they make"} the video yours.`,
-    scripts > 0 ? `${plural(scripts, "script")} in ${language} ${scripts === 1 ? "is" : "are"} ready.` : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  // The frame match shows the script that gets rendered, first.
+  const scripts = [...output.scripts].sort((a, b) => (a.id === variant ? -1 : b.id === variant ? 1 : 0));
 
   return (
-    <div className="flex flex-col gap-10">
-      <div className="flex flex-col gap-5">
-        <ScreenHeader
-          eyebrow={EYEBROW}
-          title={TITLE}
-          lede={lede}
-          actions={meta ? <SourceBadge source={meta.source} note={meta.note} /> : undefined}
-        />
-        <ScoreHeader map={map} marketName={marketName} />
+    <div className="flex flex-col gap-3 text-sm">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <Eyebrow>
+            {EYEBROW} · {marketName}
+          </Eyebrow>
+          <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">{TITLE}</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <ScoreHeader map={map} marketName={marketName} />
+          <Popover label="Score by layer" bare panelClassName="w-[min(64rem,calc(100vw-2rem))]">
+            <ScorePanel map={map} marketName={marketName} langFor={langFor} />
+          </Popover>
+        </div>
       </div>
 
-      <Suggestions changes={changes} source={source} market={market} marketName={marketName} hookGain={hookGain} />
-
-      <FrameMatch source={source} map={map} output={output} targetLang={targetLang} marketName={marketName} />
-
-      <ScorePanel map={map} marketName={marketName} langFor={langFor} />
-
-      <div id={KEEP_ID} tabIndex={-1} className="grid scroll-mt-24 gap-8 lg:grid-cols-12">
-        <div className="min-w-0 lg:col-span-8">
-          <KeepColumn items={map.keep} sourceLang={sourceLang} />
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-2 lg:col-span-2">
+          <FrameMatch
+            source={source}
+            map={map}
+            output={{ ...output, scripts }}
+            targetLang={targetLang}
+            marketName={marketName}
+            targetPoster={poster}
+          />
+          <KeepRow items={map.keep} sourceLang={sourceLang} />
+        </div>
+        {/* The list hangs in the row the frame match sets, and scrolls inside it, so an open row never grows the page. */}
+        <div className="relative min-w-0 lg:min-h-72">
+          <Suggestions
+            changes={changes}
+            source={source}
+            market={market}
+            marketName={marketName}
+            hookGain={hookGain}
+            className="lg:absolute lg:inset-0"
+          />
         </div>
       </div>
 
@@ -127,7 +145,7 @@ function PlanResult({
         onBack={onBack}
         onNext={onNext}
         next="Render the video"
-        note="Next: Wan 3.0 renders the new video from script A."
+        note={`Next: Wan 3.0 renders script ${variant} in ${languageName(targetLang)}. The kept elements stay in the shot.`}
       />
     </div>
   );

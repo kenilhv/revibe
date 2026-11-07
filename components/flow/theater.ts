@@ -3,7 +3,7 @@
 
 import { compact } from "@/lib/format";
 import { countryName, languageName, PLATFORM_NAMES } from "@/lib/markets";
-import type { MarketProfile, OutputPack, RelevanceMap, RenderJob, SourceProfile } from "@/lib/types";
+import type { MarketProfile, OutputPack, RelevanceMap, RenderJob, SourceProfile, VariantId } from "@/lib/types";
 import type { Brief, TheaterStep } from "./types";
 
 export const THEATER_MS = { analyze: 7000, market: 9000, plan: 8000, final: 9000 } as const;
@@ -58,10 +58,12 @@ export function planSteps(map?: RelevanceMap, output?: OutputPack, target?: Mark
   ];
 }
 
-export function finalSteps(output?: OutputPack, full?: RenderJob): TheaterStep[] {
-  const shots = output ? (output.scripts[0]?.lines.length ?? 0) + 1 : null;
+export function finalSteps(output?: OutputPack, full?: RenderJob, variant?: VariantId): TheaterStep[] {
+  const id = full?.variant ?? variant ?? output?.scripts[0]?.id ?? "A";
+  const script = output?.scripts.find((s) => s.id === id) ?? output?.scripts[0];
+  const shots = script ? script.lines.length + 1 : null;
   return [
-    { label: "Sending the shot list to Wan 3.0 on GMI Cloud", detail: shots ? `${shots} shots · variant A` : undefined },
+    { label: "Sending the shot list to Wan 3.0 on GMI Cloud", detail: shots ? `${shots} shots · script ${id}` : undefined },
     { label: "Rendering the video", detail: full ? `${full.seconds} s · ${full.resolution} · ${full.ratio}` : undefined },
     { label: "Adding sound", detail: full ? "generated audio" : undefined },
     { label: "Checking the frames against the plan", detail: full ? "done" : undefined },

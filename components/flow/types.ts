@@ -10,6 +10,7 @@ import type {
   RelevanceMap,
   RenderJob,
   SourceProfile,
+  VariantId,
 } from "@/lib/types";
 
 export type Stage = "brief" | "analyze" | "market" | "plan" | "final";
@@ -47,6 +48,8 @@ export interface RunData {
   target?: MarketProfile;
   map?: RelevanceMap;
   output?: OutputPack;
+  /** The script that gets rendered: the one that keeps the hook type the plan keeps, else A. */
+  renderVariant?: VariantId;
   hookClip?: RenderJob;
   fullClip?: RenderJob;
   metas: Partial<Record<"source" | "home" | "target" | "map" | "output" | "hookClip" | "fullClip", ApiMeta>>;

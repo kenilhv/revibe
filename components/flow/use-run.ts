@@ -17,7 +17,7 @@ export const DEFAULT_BRIEF: Brief = {
   niche: "energy drink",
   home: { country: "US", language: "en", platform: "tiktok" },
   target: { country: "JP", language: "ja", platform: "recommend" },
-  mode: "example",
+  mode: "api",
   homeDatasetId: null,
   targetDatasetId: null,
 };
@@ -48,7 +48,7 @@ function stepsFor(stage: Stage, b: Brief, d: RunData) {
     case "plan":
       return planSteps(d.map, d.output, d.target);
     case "final":
-      return finalSteps(d.output, d.fullClip);
+      return finalSteps(d.output, d.fullClip, d.renderVariant);
     default:
       return [];
   }
@@ -149,15 +149,15 @@ export function useRun(): { run: RunView; actions: RunActions } {
       const kept = new Set(raw.data.keep.map((k) => `${k.layer}:${k.element.trim().toLowerCase()}`));
       const m = { ...raw, data: { ...raw.data, change: raw.data.change.filter((c) => !kept.has(`${c.layer}:${c.from.trim().toLowerCase()}`)) } };
       const o = unwrap<OutputPack>(await api.output({ source: d.source, market: d.target, map: m.data }), "Could not write the scripts");
-      return { ...d, map: m.data, output: o.data, metas: { ...d.metas, map: m.meta, output: o.meta } };
+      // Render the variant that keeps the hook type the plan keeps; otherwise A.
+      const keptHook = m.data.keep.find((k) => k.layer === "hook")?.element;
+      const renderVariant = o.data.scripts.find((s) => s.hook_type === keptHook)?.id ?? o.data.scripts[0]?.id ?? "A";
+      return { ...d, map: m.data, output: o.data, renderVariant, metas: { ...d.metas, map: m.meta, output: o.meta } };
     }
     if (s === "final") {
       if (!d.source || !d.target || !d.output) throw new Error("The scripts are missing.");
-      // Render the variant that keeps the hook type the plan says to keep; otherwise A.
-      const keptHook = d.map?.keep.find((k) => k.layer === "hook")?.element;
-      const variant = d.output.scripts.find((s) => s.hook_type === keptHook)?.id ?? d.output.scripts[0]?.id ?? "A";
       const base = {
-        variant,
+        variant: d.renderVariant ?? d.output.scripts[0]?.id ?? "A",
         output: d.output,
         market: d.target.market,
         source_video_id: d.source.video.id,

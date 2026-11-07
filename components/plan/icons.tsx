@@ -27,3 +27,11 @@ export function ArrowDownIcon({ className }: { className?: string }) {
     </Icon>
   );
 }
+
+export function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <Icon className={className}>
+      <path d="m3.5 6 4.5 4.5L12.5 6" />
+    </Icon>
+  );
+}

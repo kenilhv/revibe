@@ -1,27 +1,18 @@
 "use client";
 
-// The two markets, side by side: where the video works now and where it goes next. One data source for both.
+// Column three of the brief: the home market and the target market, compact, stacked. Live Oriane data for both.
 
 import type { ReactNode } from "react";
 import { COUNTRIES, LANGUAGES, PLATFORM_NAMES, countryName, languageName } from "@/lib/markets";
-import type { DataMode, DatasetSummary, MarketInput, PlatformChoice } from "@/lib/types";
-import type { Brief } from "../flow/types";
-import { CsvUpload } from "../input/csv-upload";
-import { EXPORT_HELP_ID, ExportHelper } from "../input/export-helper";
-import { SectionTitle, Segmented, SelectField, type SegmentOption } from "../input/fields";
-import { ArrowRightIcon } from "../input/icons";
-import { Card, Chip, Eyebrow } from "../ui";
+import type { PlatformChoice } from "@/lib/types";
+import { CONTROL, LABEL } from "../input/fields";
+import { ArrowRightIcon, ChevronDownIcon } from "../input/icons";
+import { cx } from "../ui";
 import { countryLanguages, platformChoices, type MarketPatch, type Side } from "./logic";
 
-const MODE_OPTIONS: SegmentOption<DataMode>[] = [
-  { value: "example", label: "Example" },
-  { value: "csv", label: "Oriane CSV" },
-  { value: "api", label: "Oriane API" },
-];
-
 const COPY: Record<Side, { eyebrow: string; title: string }> = {
-  home: { eyebrow: "Home market", title: "Where it works now" },
-  target: { eyebrow: "Target market", title: "Where it goes next" },
+  home: { eyebrow: "Home", title: "Where it works now" },
+  target: { eyebrow: "Target", title: "Where it goes next" },
 };
 
 type MarketValue = { country: string; language: string; platform: PlatformChoice };
@@ -30,103 +21,29 @@ function platformLabel(p: PlatformChoice): string {
   return p === "recommend" ? "Recommend from data" : PLATFORM_NAMES[p];
 }
 
-function toMarketInput(m: MarketValue, mode: DataMode, dataset: DatasetSummary | null): MarketInput {
-  return { ...m, mode, dataset };
-}
-
 export function MarketPanels({
-  brief,
-  datasets,
-  helpOpen,
-  onHelpOpen,
-  onMode,
+  home,
+  target,
   onMarket,
-  onDataset,
 }: {
-  brief: Brief;
-  datasets: Record<Side, DatasetSummary | null>;
-  helpOpen: boolean;
-  onHelpOpen: (open: boolean) => void;
-  onMode: (mode: DataMode) => void;
+  home: MarketValue;
+  target: MarketValue;
   onMarket: (side: Side, patch: MarketPatch) => void;
-  onDataset: (side: Side, dataset: DatasetSummary | null) => void;
 }) {
-  const { mode } = brief;
-  const sides: Record<Side, MarketValue> = { home: brief.home, target: brief.target };
-  const sameFile = mode === "csv" && !!datasets.home && datasets.home.id === datasets.target?.id;
-
-  function showHelp() {
-    onHelpOpen(true);
-    // The helper is always rendered in CSV mode and opens downward, so scroll and focus now.
-    const el = document.getElementById(EXPORT_HELP_ID);
-    if (!el) return;
-    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    el.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
-    el.querySelector("summary")?.focus({ preventScroll: true });
-  }
-
   return (
-    <section aria-labelledby="brief-markets-title" className="flex flex-col gap-4">
-      <SectionTitle
-        id="brief-markets-title"
-        eyebrow="Markets"
-        title={
-          <>
-            {countryName(brief.home.country)} <span className="text-faint">to</span> {countryName(brief.target.country)}
-          </>
-        }
-        aside={<Segmented name="brief-mode" legend="Data source" value={mode} options={MODE_OPTIONS} onChange={onMode} />}
-      />
-
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-4">
-        {(["home", "target"] as Side[]).map((side, i) => (
-          <Panel key={side} side={side} value={sides[side]} onChange={(patch) => onMarket(side, patch)} first={i === 0}>
-            {mode === "csv" && (
-              <CsvUpload
-                id={`brief-${side}-csv`}
-                market={toMarketInput(sides[side], mode, datasets[side])}
-                onDataset={(dataset) => onDataset(side, dataset)}
-                onShowHelp={showHelp}
-              />
-            )}
-          </Panel>
-        ))}
+    <div className="flex flex-col gap-2.5">
+      <MarketBlock side="home" value={home} onChange={(patch) => onMarket("home", patch)} />
+      <div aria-hidden="true" className="flex items-center gap-2 text-accent">
+        <span className="h-px flex-1 bg-line" />
+        <ArrowRightIcon className="size-4 rotate-90" />
+        <span className="h-px flex-1 bg-line" />
       </div>
-
-      {sameFile && (
-        <p className="rounded-lg border border-gold/30 bg-gold-soft px-3 py-2 text-sm text-gold">
-          Both markets use the same file. Export one search for each market.
-        </p>
-      )}
-
-      <ModeNote mode={mode} />
-
-      {mode === "csv" && (
-        <ExportHelper
-          niche={brief.niche}
-          home={toMarketInput(brief.home, mode, datasets.home)}
-          target={toMarketInput(brief.target, mode, datasets.target)}
-          open={helpOpen}
-          onOpenChange={onHelpOpen}
-        />
-      )}
-    </section>
+      <MarketBlock side="target" value={target} onChange={(patch) => onMarket("target", patch)} />
+    </div>
   );
 }
 
-function Panel({
-  side,
-  value,
-  first,
-  onChange,
-  children,
-}: {
-  side: Side;
-  value: MarketValue;
-  first: boolean;
-  onChange: (patch: MarketPatch) => void;
-  children?: ReactNode;
-}) {
+function MarketBlock({ side, value, onChange }: { side: Side; value: MarketValue; onChange: (patch: MarketPatch) => void }) {
   const copy = COPY[side];
   const local = countryLanguages(value.country);
   const other = Object.keys(LANGUAGES).filter((l) => !local.includes(l));
@@ -145,101 +62,87 @@ function Panel({
   }
 
   return (
-    <>
-      <Card className="flex min-w-0 flex-col gap-4 p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <Eyebrow>{copy.eyebrow}</Eyebrow>
-            <h3 className="font-display text-lg font-semibold tracking-tight">{copy.title}</h3>
-          </div>
-          <span className="tabular shrink-0 rounded-md border border-line px-2 py-0.5 font-mono text-xs text-muted">
-            {value.country} · {value.language.toUpperCase()}
-          </span>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SelectField id={`brief-${side}-country`} label="Country" value={value.country} onChange={changeCountry} className="sm:col-span-2">
-            {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name}
-              </option>
-            ))}
-          </SelectField>
-
-          <SelectField id={`brief-${side}-language`} label="Language" value={value.language} onChange={(language) => onChange({ language })}>
-            {!known && <option value={value.language}>{languageName(value.language)}</option>}
-            {local.length > 0 && (
-              <optgroup label={`Spoken in ${countryName(value.country)}`}>
-                {local.map((l) => (
-                  <option key={l} value={l}>
-                    {languageName(l)}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            <optgroup label="Other languages">
-              {other.map((l) => (
+    <section aria-labelledby={`brief-${side}-title`} className="flex min-w-0 flex-col gap-2">
+      <div className="flex items-baseline gap-2">
+        <span className={cx(LABEL, side === "target" && "text-accent")}>{copy.eyebrow}</span>
+        <h3 id={`brief-${side}-title`} className="text-sm font-medium">
+          {copy.title}
+        </h3>
+        <span className="tabular ml-auto font-mono text-xs text-muted">
+          {value.country} · {value.language.toUpperCase()}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Pick id={`brief-${side}-country`} label="Country" value={value.country} onChange={changeCountry} className="col-span-2">
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.name}
+            </option>
+          ))}
+        </Pick>
+        <Pick id={`brief-${side}-language`} label="Language" value={value.language} onChange={(language) => onChange({ language })}>
+          {!known && <option value={value.language}>{languageName(value.language)}</option>}
+          {local.length > 0 && (
+            <optgroup label={`Spoken in ${countryName(value.country)}`}>
+              {local.map((l) => (
                 <option key={l} value={l}>
                   {languageName(l)}
                 </option>
               ))}
             </optgroup>
-          </SelectField>
-
-          <SelectField id={`brief-${side}-platform`} label="Platform" value={value.platform} onChange={changePlatform}>
-            {choices.map((p) => (
-              <option key={p} value={p}>
-                {platformLabel(p)}
+          )}
+          <optgroup label="Other languages">
+            {other.map((l) => (
+              <option key={l} value={l}>
+                {languageName(l)}
               </option>
             ))}
-          </SelectField>
-        </div>
-
-        {children}
-      </Card>
-      {first && (
-        <div aria-hidden="true" className="flex items-center justify-center">
-          <span className="grid size-10 place-items-center rounded-full border border-line-strong bg-surface text-accent shadow-card">
-            <ArrowRightIcon className="size-5 rotate-90 lg:rotate-0" />
-          </span>
-        </div>
-      )}
-    </>
+          </optgroup>
+        </Pick>
+        <Pick id={`brief-${side}-platform`} label="Platform" value={value.platform} onChange={changePlatform}>
+          {choices.map((p) => (
+            <option key={p} value={p}>
+              {platformLabel(p)}
+            </option>
+          ))}
+        </Pick>
+      </div>
+    </section>
   );
 }
 
-function ModeNote({ mode }: { mode: DataMode }) {
-  if (mode === "example") {
-    return (
-      <Note>
-        <Chip tone="gold">Example data</Chip>
-        <span>Bundled energy drink sample, US to Japan. No upload needed.</span>
-      </Note>
-    );
-  }
-  if (mode === "api") {
-    return (
-      <Note>
-        <Chip tone="keep">
-          <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
-          Live
-        </Chip>
-        <span>Live scan from Oriane. Takes 1 to 2 minutes the first time; cached after.</span>
-      </Note>
-    );
-  }
+/** A compact labeled select. */
+function Pick({
+  id,
+  label,
+  value,
+  onChange,
+  className,
+  children,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <Note>
-      <Chip tone="neutral">Oriane CSV</Chip>
-      <span>One search export for each market. Drop each file in its panel.</span>
-    </Note>
-  );
-}
-
-function Note({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-sm text-muted">
-      {children}
+    <div className={cx("flex min-w-0 flex-col gap-1", className)}>
+      <label htmlFor={id} className={LABEL}>
+        {label}
+      </label>
+      <div className="relative">
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={cx(CONTROL, "h-9 cursor-pointer appearance-none truncate pr-8 pl-2.5 text-sm")}
+        >
+          {children}
+        </select>
+        <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted" />
+      </div>
     </div>
   );
 }

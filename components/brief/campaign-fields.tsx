@@ -1,12 +1,11 @@
 "use client";
 
-// The campaign brief (notes or a dropped .txt/.md file) and the niche with quick picks.
+// The campaign brief (typed, or a dropped .txt or .md file) and the niche field.
 
 import { useState, type DragEvent } from "react";
 import { CONTROL, LABEL } from "../input/fields";
-import { Button, cx } from "../ui";
-import { NotesIcon } from "./icons";
-import { EXAMPLE_DOCS, QUICK_PICKS, looksLikeText, wordCount } from "./logic";
+import { cx } from "../ui";
+import { looksLikeText, wordCount } from "./logic";
 
 const DOCS_ID = "brief-docs";
 const NICHE_ID = "brief-niche";
@@ -50,27 +49,14 @@ export function BriefField({ value, disabled, onChange }: { value: string; disab
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <label htmlFor={DOCS_ID} className={LABEL}>
-          Campaign brief
-        </label>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            onChange(EXAMPLE_DOCS);
-            setNote(null);
-          }}
-        >
-          <NotesIcon className="size-4" />
-          Paste an example brief
-        </Button>
-      </div>
+    <div className="flex h-full min-w-0 flex-col gap-1.5">
+      <label htmlFor={DOCS_ID} className={LABEL}>
+        Campaign brief
+      </label>
       <textarea
         id={DOCS_ID}
         name="docs"
-        rows={4}
+        rows={6}
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -80,20 +66,16 @@ export function BriefField({ value, disabled, onChange }: { value: string; disab
         onDragOver={onDragOver}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        placeholder="What is the campaign? Goals, the claims to keep, the launch date, the audience. Paste your notes or your doc."
+        placeholder="Goals, the claims to keep, the launch date, the audience. Paste your notes or your doc."
         aria-describedby={`${DOCS_ID}-hint`}
-        className={cx(
-          CONTROL,
-          "min-h-28 resize-y px-3.5 py-3 text-sm leading-relaxed",
-          dragging && "border-accent bg-accent-soft/30",
-        )}
+        className={cx(CONTROL, "min-h-0 flex-1 resize-none px-3 py-2.5 text-sm leading-relaxed", dragging && "border-accent bg-accent-soft/30")}
       />
       <p
         id={`${DOCS_ID}-hint`}
-        className={cx("flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs leading-relaxed", note?.kind === "error" ? "text-danger" : "text-muted")}
+        className={cx("flex justify-between gap-3 text-xs leading-snug", note?.kind === "error" ? "text-danger" : "text-muted")}
       >
-        <span>{note ? note.text : "Or drop a .txt or .md file here."}</span>
-        <span className="tabular font-mono text-faint">
+        <span className="min-w-0 truncate">{note ? note.text : "Optional. Or drop a .txt or .md file here."}</span>
+        <span className="tabular shrink-0 font-mono text-faint">
           {words} {words === 1 ? "word" : "words"}
         </span>
       </p>
@@ -102,9 +84,8 @@ export function BriefField({ value, disabled, onChange }: { value: string; disab
 }
 
 export function NicheField({ value, onChange }: { value: string; onChange: (niche: string) => void }) {
-  const current = value.trim().toLowerCase();
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <label htmlFor={NICHE_ID} className={LABEL}>
         Niche
       </label>
@@ -118,30 +99,9 @@ export function NicheField({ value, onChange }: { value: string; onChange: (nich
         autoComplete="off"
         placeholder="For example: energy drink"
         aria-describedby={`${NICHE_ID}-hint`}
-        className={cx(CONTROL, "h-12 px-4 font-display text-lg font-medium")}
+        className={cx(CONTROL, "h-10 px-3 font-display text-base font-medium")}
       />
-      <div role="group" aria-label="Quick picks" className="flex flex-wrap gap-2">
-        {QUICK_PICKS.map((pick) => {
-          const active = current === pick;
-          return (
-            <button
-              key={pick}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onChange(pick)}
-              className={cx(
-                "h-9 rounded-full border px-3.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                active
-                  ? "border-accent bg-accent-soft font-medium text-accent"
-                  : "border-line-strong bg-surface text-muted hover:border-faint hover:text-ink",
-              )}
-            >
-              {pick}
-            </button>
-          );
-        })}
-      </div>
-      <p id={`${NICHE_ID}-hint`} className="text-xs leading-relaxed text-muted">
+      <p id={`${NICHE_ID}-hint`} className="text-xs leading-snug text-muted">
         The product or the topic. ReVibe searches both markets for it.
       </p>
     </div>

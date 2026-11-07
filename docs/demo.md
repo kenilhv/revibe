@@ -6,7 +6,8 @@ Everything replays from the cache. Set `REVIBE_OFFLINE=1` in `.env.local`, resta
 
 - Source: https://www.tiktok.com/@jennnbellee/video/7676581842794958110 (4.8M views, TikTok, US). Paste this exact link.
 - Niche: energy drink. Home: United States, English. Target: Japan, Japanese, platform "Recommend from data". Data source: Oriane API.
-- Cached: the video analysis, the US and Japan scans (200 candidates each, 114 and 56 on-topic), the plan (68% → 93%, 7 changes), three scripts, the hook clip and the full video from Wan 3.0.
+- Cached: the video analysis, the US and Japan scans (200 candidates each, 114 and 56 on-topic), the plan (68% → 93%), three scripts, and the Wan 3.0 renders: script B hook (5 s), script B full (22 s), and a US-market recreation of the source with the same creator and the same Red Bull can (`us-7676581842794958110.mp4`), shown as "Before". The real TikTok download is `source-7676581842794958110.mp4`.
+- Say it straight if asked: the "before" on screen is a recreation of the TikTok source so both videos share one creator and one can; the original is linked on the Analyze stage.
 
 ## Script
 
